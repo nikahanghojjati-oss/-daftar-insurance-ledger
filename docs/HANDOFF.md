@@ -7,7 +7,7 @@ Read AGENTS.md, README.md and VALIDATION.md. This repository is the standalone s
 Recovered from the owner's existing Sites source, commit `05f411c6d4db805d7c1654a13cdb93215f9c2984` (published Sites version 6).
 Existing public prototype: https://daftar-insurance-nik-2026.nika-harvard.chatgpt.site
 Dedicated repository: https://github.com/nikahanghojjati-oss/-daftar-insurance-ledger
-The exact repository name begins with a hyphen: `-daftar-insurance-ledger`. Pages publication is pending verification; do not invent a live github.io URL.
+The exact repository name begins with a hyphen: `-daftar-insurance-ledger`. GitHub Pages is live at https://nikahanghojjati-oss.github.io/-daftar-insurance-ledger/ (deployment and HTTP 200 verified on 2026-11-02 ET).
 
 ## Implemented
 - Farsi RTL, Shamsi dates, mixed numeral input, bundled Vazirmatn OFL font.
@@ -41,3 +41,8 @@ Local-first use with reliable cloud reconciliation and the same confirmed data o
 
 ## Collaboration
 Use small branches and PRs. A second GPT can read this public repository; editing requires the owner's GitHub connector/Codex repository access. The GitHub Pages URL displays the application; the repository URL exposes the code and handoff. Do not give a general public ledger-write rule to solve access errors.
+
+## Date and installment change (branch feature/date-installments-sync)
+- Today's date is computed for Tehran at each render, every 30 seconds while open, on focus/pageshow/visibility return, and after reconnect. A fresh same-origin HTTP Date header (HEAD, nonce, no-store; service worker bypass) corrects device-clock skew online. Offline cannot know authoritative time if the device clock is wrong; the UI labels this state. Tests cover the Tehran midnight boundary and online skew.
+- New plans default to installment payment, up to six regular payments: a positive initial amount on policy start, then first due one Jalali month plus 15 calendar days after start (Esfand 5 → Farvardin 20), followed by anchored monthly payments. Owner sets the actual down-payment percent/amount and can edit the first date, frequency, every date and every amount. No interest; integer remainder in last installment. Cash pays full price immediately. Existing saved schedules can be revised with audit history, retaining receipts and total. Older policies and schema-1/2 backups remain readable.
+- **Firebase cloud sync is not live**. See [FIREBASE_SYNC_PLAN.md](FIREBASE_SYNC_PLAN.md) for the exact console setup, access design, low-read protocol and acceptance gate. The owner must provide verified configuration from the existing Firebase project; the available browser session is a Google sign-in wall, not the owner's Safari console.

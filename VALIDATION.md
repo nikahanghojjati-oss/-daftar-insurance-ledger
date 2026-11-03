@@ -61,3 +61,9 @@ Hosted verification (v5): unauthenticated Cloud Browser opened the public URL. T
 ## Standalone GitHub Pages preparation — 2026-11-02
 
 26 Node tests pass. New regression covers /daftar/ project subpaths: all 11 shell assets remain beneath that path; font and navigation resolve from cache offline; activation deletes only caches for this app path and leaves other GitHub Pages projects untouched. Syntax checks pass. The Pages workflow runs tests before uploading dist/. Repository creation, workflow execution, hosted Pages URL and browser verification on the github.io origin remain pending.
+
+## Date and installment branch — 2026-11-02 ET
+
+32 Node tests pass and syntax checks pass for app/core/clock/service-worker. New checks cover Tehran midnight/new year, HTTP Date correction for a two-day device-clock skew, missing server timestamp rejection, cache bypass for the clock request, Esfand 5 → Farvardin 20, six-payment limit, exact sums and custom dates/amounts, cash settlement, and revision audit without changing existing receipt IDs or balances.
+
+The online server clock was observed on the published GitHub Pages host using a fresh `HEAD /-daftar-insurance-ledger/index.html?__daftar_clock=<nonce>` request: HTTP 200, Date header present, Age 0. The feature branch is not yet deployed to Pages; live browser UI and real-device midnight/offline behavior remain unverified. Firebase console and cross-device sync are still not configured or tested; no real customer data has been sent to Firebase.

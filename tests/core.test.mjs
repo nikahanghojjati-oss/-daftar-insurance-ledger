@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {digits,normalize,amount,fromJalali,parseDate,dateInput,jparts,addDays,addMonths,today,makePolicy,recordPayment,policySummary,customerSummary,ledgerSummary,dueItems,emptyLedger,demoLedger,validateLedger} from '../dist/core.js';
+import {digits,normalize,amount,fromJalali,parseDate,dateInput,jparts,addDays,addMonths,firstInsuranceDue,today,tehranDay,setClockOffset,makePolicy,reviseSchedule,recordPayment,policySummary,customerSummary,ledgerSummary,dueItems,emptyLedger,demoLedger,validateLedger} from '../dist/core.js';
 const policy=(extra={})=>makePolicy({title:'بیمه آزمایشی',number:'۱۰۱',total:'۱۰۰۰',down:'۱۰۰',count:'۳',frequency:'monthly',firstDate:'۱۴۰۵/۰۷/۳۰',paymentDate:'۱۴۰۵/۰۷/۱۰',...extra});
 test('Persian, Arabic and Latin numbers; no decimals, negatives or silent truncation',()=>{
   assert.equal(digits('۱۲٣۴٥۶'),'123456');assert.equal(amount('۱۲٬۳۴۵'),12345);assert.equal(amount('١٢,٣٤٥'),12345);assert.equal(amount('12345'),12345);
@@ -13,6 +13,32 @@ test('Known Persian calendar dates and leap years',()=>{
   assert.equal(fromJalali(1403,12,30),'2025-03-20');assert.throws(()=>fromJalali(1404,12,30));assert.throws(()=>parseDate('۱۴۰۵/۰۷/۳۱'));assert.throws(()=>parseDate('۱۴۰۵/۱۳/۱۰'));
   assert.throws(()=>jparts('2026-02-30'));
 });
+test('Tehran date changes at Tehran midnight, including a Persian new year, without cached startup date',()=>{
+  assert.equal(tehranDay(Date.parse('2026-11-02T20:29:59Z')),'2026-11-02');
+  assert.equal(tehranDay(Date.parse('2026-11-02T20:30:00Z')),'2026-11-03');
+  assert.equal(dateInput(tehranDay(Date.parse('2025-03-20T21:00:00Z'))),'۱۴۰۴/۰۱/۰۱');
+  setClockOffset(0);assert.equal(today(),tehranDay(Date.now()));
+});
+test('Insurance installments start one Persian month plus fifteen calendar days after issuance',()=>{
+  const issued=parseDate('۱۴۰۴/۱۲/۰۵');assert.equal(dateInput(firstInsuranceDue(issued)),'۱۴۰۵/۰۱/۲۰');
+  const p=makePolicy({title:'بیمه',total:'۱۰۰۱',down:'۱۰۱',count:'۵',frequency:'monthly',plan:'installments',paymentDate:'۱۴۰۴/۱۲/۰۵'});
+  assert.equal(dateInput(p.installments[1].dueDate),'۱۴۰۵/۰۱/۲۰');
+  assert.equal(dateInput(p.installments.at(-1).dueDate),'۱۴۰۵/۰۵/۲۰');
+  assert.equal(p.installments.reduce((sum,i)=>sum+i.amount,0),1001);assert.equal(policySummary(p).owed,900);
+  const custom=makePolicy({title:'بیمه',total:'۱۰۰۰',down:'۲۰۰',count:'۲',plan:'installments',frequency:'monthly',paymentDate:'۱۴۰۴/۱۲/۰۵',firstDate:'۱۴۰۵/۰۱/۲۰',installmentDates:['۱۴۰۵/۰۲/۰۱','۱۴۰۵/۰۴/۰۳'],installmentAmounts:['۳۰۰','۵۰۰']});
+  assert.deepEqual(custom.installments.map(i=>i.amount),[200,300,500]);assert.equal(dateInput(custom.installments.at(-1).dueDate),'۱۴۰۵/۰۴/۰۳');
+  const cash=makePolicy({title:'بیمه',total:'۱۰۰۰',plan:'cash',paymentDate:'۱۴۰۴/۱۲/۰۵'});assert.equal(cash.frequency,'cash');assert.equal(policySummary(cash).owed,0);assert.equal(validateLedger({schemaVersion:2,currency:'toman',customers:[{id:'customer',name:'مشتری',phone:'',notes:'',policies:[cash]}]}).customers.length,1);
+  assert.throws(()=>makePolicy({title:'بیمه',total:'۱۰۰۰',down:'۰',count:'۵',plan:'installments',frequency:'monthly',paymentDate:'۱۴۰۴/۱۲/۰۵'}));
+  assert.throws(()=>makePolicy({title:'بیمه',total:'۱۰۰۰',down:'۱۰۰',count:'۷',plan:'installments',frequency:'monthly',paymentDate:'۱۴۰۴/۱۲/۰۵'}));
+});
+test('A saved installment schedule can be revised without changing total, receipts or IDs',()=>{
+  const original=makePolicy({total:'۱۰۰۰',down:'۲۰۰',count:'۲',plan:'installments',frequency:'monthly',paymentDate:'۱۴۰۴/۱۲/۰۵'}),regular=original.installments.filter(i=>i.kind==='regular');
+  const revised=reviseSchedule(original,[{date:'۱۴۰۵/۰۲/۰۱',amount:'۳۰۰'},{date:'۱۴۰۵/۰۳/۰۱',amount:'۵۰۰'}]);
+  assert.deepEqual(revised.installments.filter(i=>i.kind==='regular').map(i=>i.id),regular.map(i=>i.id));
+  assert.equal(revised.payments[0].id,original.payments[0].id);assert.equal(policySummary(revised).owed,800);
+  assert.equal(validateLedger({schemaVersion:2,currency:'toman',customers:[{id:'customer',name:'مشتری',phone:'',notes:'',policies:[revised]}]}).customers.length,1);
+  assert.throws(()=>reviseSchedule(revised,[{date:'۱۴۰۵/۰۲/۰۱',amount:'۳۰۱'},{date:'۱۴۰۵/۰۳/۰۱',amount:'۵۰۰'}]),/جمع/);
+});
 test('Every day of 1403–1406 round trips and month-end schedules stay anchored',()=>{
   for(let i=0;i<1461;i++){const iso=addDays('2024-03-20',i);assert.equal(parseDate(dateInput(iso)),iso);}
   const first=fromJalali(1403,6,31);assert.deepEqual(jparts(addMonths(first,1)),{y:1403,m:7,d:30});assert.deepEqual(jparts(addMonths(first,6)),{y:1403,m:12,d:30});assert.deepEqual(jparts(addMonths(first,7)),{y:1404,m:1,d:31});
@@ -22,7 +48,7 @@ test('Every day of 1403–1406 round trips and month-end schedules stay anchored
 test('Monthly and weekly schedules sum exactly, remainder goes to last installment',()=>{
   const p=policy({total:'۱۰۰۱'});assert.deepEqual(p.installments.map(i=>i.amount),[100,300,300,301]);assert.equal(p.installments.reduce((s,i)=>s+i.amount,0),1001);
   const week=policy({frequency:'weekly',down:'۰'});assert.equal(week.installments[1].dueDate,addDays(week.installments[0].dueDate,7));
-  const monthly=policy({firstDate:'۱۴۰۳/۰۶/۳۱',count:'۸',down:'۰'});assert.equal(dateInput(monthly.installments.at(-1).dueDate),'۱۴۰۴/۰۱/۳۱');
+  const monthly=policy({firstDate:'۱۴۰۳/۰۶/۳۱',count:'۶',down:'۰'});assert.equal(dateInput(monthly.installments.at(-1).dueDate),'۱۴۰۳/۱۱/۳۰');
 });
 test('Debt only decreases for recorded money; partial and early payments allocate oldest first',()=>{
   let p=policy();const s=policySummary(p,'2026-11-01');assert.equal(s.paid,100);assert.equal(s.owed,900);assert.equal(s.overdue,300);

@@ -1,0 +1,7 @@
+[hidden]{display:none!important}
+.today{display:flex;align-items:center;flex-wrap:wrap;gap:0 5px}
+.today small{font-size:10px;color:var(--muted);font-weight:400;width:100%;padding-right:22px;line-height:1.4}
+.installment-edit{padding:9px 12px 0;border:1px solid var(--line);border-radius:12px;margin:9px 0}
+.installment-edit .field{min-width:0}
+.installment-edit input{width:100%}
+.schedule-edit-btn{margin:3px 17px 12px}
