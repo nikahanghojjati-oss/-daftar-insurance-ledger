@@ -150,8 +150,10 @@ document.addEventListener('input',event=>{
     const f=$('#policy-form'),name=event.target.name;
     if(name==='paymentDate'&&!f.dataset.manualFirst){try{f.elements.firstDate.value=dateInput(firstInsuranceDue(parseDate(event.target.value)));}catch{}}
     if(name==='firstDate')f.dataset.manualFirst='yes';
-    if(name==='downPercent'){
-      try{const pct=Number(digits(event.target.value).replace('٫','.'));if(!Number.isFinite(pct)||pct<0||pct>100||!/^(?:\d+)(?:[.٫]\d{1,2})?$/.test(digits(event.target.value)))throw Error();f.elements.down.value=String(Math.round(amount(f.elements.total.value)*pct/100));}catch{f.elements.down.value='۰';}
+    if(name==='downPercent'||name==='total'&&f.elements.downPercent.value){
+      try{const value=digits(f.elements.downPercent.value),pct=Number(value.replace('٫','.'));if(!Number.isFinite(pct)||pct<0||pct>100||!/^(?:\d+)(?:[.٫]\d{1,2})?$/.test(value))throw Error();f.elements.down.value=String(Math.round(amount(f.elements.total.value)*pct/100));}catch{f.elements.down.value='۰';}
+    }else if(name==='down'){
+      try{f.elements.downPercent.value=fa(String(Number((amount(f.elements.down.value)/amount(f.elements.total.value)*100).toFixed(2))));}catch{f.elements.downPercent.value='';}
     }
     if(['total','down','downPercent','count','frequency','firstDate','plan'].includes(name)){
       if(name!=='installmentDate'&&name!=='installmentAmount')f.dataset.manualSchedule='';
