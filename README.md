@@ -57,3 +57,5 @@ The owner can connect a dedicated rules-only service account through the encrypt
 ### Sync preparation (2026-11-02 ET)
 
 The continuation branch includes an optional local-first Firebase REST sync implementation and candidate UID-scoped rules. The console setup and rules-only GitHub access are verified. Cloud customer access is still disabled by the live deny-all rules. See the latest HANDOFF and VALIDATION sections for implemented behavior, evidence and remaining acceptance gates. Never migrate real customer records before those gates pass.
+
+Owner-approved private Firebase rules were published on 2026-11-02 ET. The sync client still requires initial device sign-in and connection review; production two-device acceptance must precede migration of real records.

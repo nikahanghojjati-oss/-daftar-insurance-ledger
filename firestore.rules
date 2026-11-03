@@ -1,11 +1,31 @@
-// SETUP_BLOCKED: This source cannot be published until access rules and the
-// offline sync client pass review, emulator tests, and a two-device trial.
-// It intentionally denies all client access while the project is configured.
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
+    function owner(ledger) {
+      return request.auth != null
+        && request.auth.uid == 'i6VYpbhc1Iaf0qNjILLRnwhvISR2'
+        && ledger == request.auth.uid;
     }
+    match /ledgers/{ledger} {
+      allow get: if owner(ledger);
+      allow create: if owner(ledger)
+        && request.resource.data.keys().hasOnly(['schemaVersion', 'currency'])
+        && request.resource.data.schemaVersion == 2
+        && request.resource.data.currency in ['toman', 'rial'];
+      // No metadata overwrites, currency conversion, collection listing or deletion.
+      match /customers/{customer} {
+        allow get, list: if owner(ledger);
+        allow create, update: if owner(ledger)
+          && exists(/databases/$(database)/documents/ledgers/$(ledger))
+          && request.resource.data.keys().hasOnly(['payload', 'operation'])
+          && request.resource.data.payload is string
+          && request.resource.data.payload.size() <= 700000
+          && request.resource.data.operation is string
+          && request.resource.data.operation.size() > 0
+          && request.resource.data.operation.size() <= 100;
+        // Receipts are canceled with retained history, never hard-deleted.
+      }
+    }
+    match /{document=**} { allow read, write: if false; }
   }
 }

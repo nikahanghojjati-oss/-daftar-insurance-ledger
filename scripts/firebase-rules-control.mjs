@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
+import {assertReadyRules} from './rules-readiness.mjs';
 
 const project=process.env.FIREBASE_PROJECT_ID;
 const operation=process.env.FIREBASE_RULES_OPERATION;
@@ -10,7 +11,7 @@ const rulesFile=new URL('../firestore.rules',import.meta.url);
 let local;
 if(operation==='publish'){
   local=fs.readFileSync(rulesFile,'utf8');
-  if(local.includes('SETUP_BLOCKED')||!local.includes('request.auth.uid')||!local.includes("rules_version = '2'"))throw Error('Rules publication is blocked until reviewed UID-scoped rules replace the deny-all placeholder.');
+  assertReadyRules(local,fs.readFileSync(new URL('../firestore.sync.rules',import.meta.url),'utf8'));
 }
 const credentialsPath=process.env.GOOGLE_APPLICATION_CREDENTIALS;
 if(!credentialsPath||!fs.existsSync(credentialsPath))throw Error('GitHub Actions credential is missing.');
@@ -53,3 +54,4 @@ if(operation==='verify'){
   const hash=crypto.createHash('sha256').update(local).digest('hex');
   console.log(`FIREBASE_RULES_EXACT_SOURCE_OK project=${project} sha256=${hash} release=${live.name}`);
 }
+

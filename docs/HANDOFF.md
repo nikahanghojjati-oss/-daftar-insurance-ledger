@@ -68,3 +68,10 @@ Validation and remaining gates are recorded in VALIDATION.md. Live two-device ac
 Firestore emulator CI passed on run 41568147086: all three owner/anonymous/other-user authorization test groups passed, plus all 52 Node checks. Live rules still deny-all; no production customer records were created.
 
 The complete REST transport test passed in run 41568951641 (four emulator groups); 54 local checks now pass, including 19 sync checks. Single-document commits put the update-time precondition in the JSON body. HTTP 400 FAILED_PRECONDITION also triggers reread/reconciliation. Both original customer versions are retained in the synced customer syncResolutions archive after an explicit resolution, so review history is portable across devices. Backups with unresolved originals reinstate the review requirement when connected again.
+
+
+## Rules activation and professional interface — 2026-11-02 ET
+
+The owner explicitly approved publishing the staged UID-scoped rules. They were published through Chrome in the dedicated Firebase project; the console shows an active published revision at 10:14 PM ET, with no unpublished changes. `firestore.rules` now matches the reviewed `firestore.sync.rules` exactly. The manual rules publisher refuses any source that differs from that reviewed candidate. Account sign-in on the ledger, live two-device acceptance, and migration remain pending; no real customer records were uploaded.
+
+The visual update adds a slate navigation rail, warm-white workspace, teal balance emphasis, stronger typography, clearer table/status hierarchy, refined payment and backup forms, and responsive mobile navigation. All fonts and assets remain local. The application stays on the same GitHub Pages URL and retains its ledger storage keys, schema, amounts, date calculations and sync protocol. `dist/professional.css` is the final visual layer. Shell cache v9 includes that stylesheet.
