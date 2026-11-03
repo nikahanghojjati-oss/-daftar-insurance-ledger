@@ -41,7 +41,14 @@ export class FirebaseRest {
   }
   async firestore(path,method='GET',body) {
     const token=await this.token();
-    return this.request(this.root+path,{method,headers:{Authorization:`Bearer ${token}`,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
+    const send=access=>this.request(this.root+path,{method,headers:{Authorization:`Bearer ${access}`,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
+    try{return await send(token);}
+    catch(e){
+      if(e.status!==401)throw e;
+      const current=this.session();if(!current)throw e;
+      this.storage.setItem(AUTH_KEY,JSON.stringify({...current,expiresAt:0}));
+      return send(await this.token());
+    }
   }
   async meta() {
     this.reads++;

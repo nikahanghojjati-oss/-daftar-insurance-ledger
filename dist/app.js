@@ -27,7 +27,8 @@ const navs=[['home','home','خانه'],['customers','users','مشتریان'],['
 function toast(message,error=false){const t=$('#toast');t.textContent=message;t.className=error?'show error':'show';clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.className='',5500);}
 async function commit(next){
  const expectedRaw=baseRaw,expectedMode=mode,previous=data;
- return withLedgerLock(()=>{
+ const lock=navigator.locks||previous.cloud?withLedgerLock:task=>task();
+ return lock(()=>{
   if(mode!==expectedMode)throw Error('دفتر فعال تغییر کرد؛ دوباره تلاش کنید.');
   if(!storageOK||corrupt)throw new Error('ذخیره‌سازی دستگاه در دسترس نیست. ابتدا مشکل ذخیره‌سازی یا فایل پشتیبان را بررسی کنید.');
   next=queueChanges(previous,next);
@@ -153,11 +154,13 @@ document.addEventListener('click',async event=>{
     else if(a==='resume-draft')resumeDraft(b.dataset.key);
     else if(a==='discard-draft'){const f=$('#dialog form');discardDraft(f);closeDialog();render();toast('فرم ناتمام پاک شد؛ حساب‌ها تغییری نکرد.');}
     else if(a==='confirm-import'){
+      await withLedgerLock(()=>{
       if(readOwn()?.cloud)throw Error('دفتر متصل را نمی‌توان با پشتیبان جایگزین کرد.');
       if(!$('#restore-confirm').checked)throw new Error('برای ادامه، تأیید جایگزینی دفتر را علامت بزنید.');
       if(!importCandidate)throw Error('فایل پشتیبان را دوباره انتخاب کنید.');
       if(localStorage.getItem(STORE.own)!==importCandidate.raw)throw Error('دفتر در پنجره دیگری تغییر کرده است. فایل را دوباره انتخاب کنید.');
       const next={...backupLedger(importCandidate.data),revision:uid(),updatedAt:new Date().toISOString()},raw=JSON.stringify(next);localStorage.setItem(STORE.own,raw);localStorage.setItem(MODE,'own');data=next;baseRaw=raw;mode='own';storageOK=true;corrupt=false;try{localStorage.removeItem('daftar.drafts.'+mode);}catch{}closeDialog();go('home');toast('پشتیبان بازگردانده شد. دفتر شخصی شما آماده است.');
+      });
     }
   }catch(e){formError(e);}
 });
@@ -187,10 +190,12 @@ document.addEventListener('submit',async event=>{
   if(submit)submit.disabled=true;
   try{
     if(form.id==='setup-form'){
+      await withLedgerLock(()=>{
       if(!Object.hasOwn(CURRENCIES,v.currency))throw new Error('واحد پول را انتخاب کنید.');
       if(readOwn()?.cloud)throw Error('دفتر متصل را نمی‌توان دوباره ایجاد کرد.');
       const existing=localStorage.getItem(STORE.own);if(existing&&validateLedger(JSON.parse(existing)).customers.length)throw new Error('دفتر شخصی اطلاعات دارد؛ واحد پول آن تغییر نمی‌کند.');
       const next=emptyLedger(v.currency),raw=JSON.stringify(next);localStorage.setItem(STORE.own,raw);localStorage.setItem(MODE,'own');mode='own';data=next;baseRaw=raw;closeDialog();go('customers');toast('دفتر شما آماده است. اولین مشتری را اضافه کنید.');
+      });
     }else if(form.id==='customer-form'){
       const name=v.name.trim();if(!name)throw new Error('نام مشتری را وارد کنید.');
       const id=form.dataset.id||uid();await mutate(d=>{const c=d.customers.find(c=>c.id===id);if(c){c.revisions=[...(c.revisions||[]),{at:new Date().toISOString(),name:c.name,phone:c.phone,notes:c.notes}];c.name=name;c.phone=digits(v.phone.trim());c.notes=v.notes.trim();}else d.customers.push({id,name,phone:digits(v.phone.trim()),notes:v.notes.trim(),policies:[]});});discardDraft(form);closeDialog();go('profile',id);toast('اطلاعات مشتری ذخیره شد.');
@@ -295,8 +300,13 @@ async function cloudPreview(){
   cloudJoinPreview=preview;
 }
 let cloudJoinPreview=null;
+function conflictCustomer(c){
+  if(!c)return '<p>این پرونده در این نسخه وجود ندارد.</p>';
+  const summary=customerSummary(c);
+  return `<h3>${esc(c.name)}</h3><p>${esc(fa(c.phone))} ${esc(c.notes)}</p><p>پرداخت‌شده: ${cash(summary.paid)} · مانده: ${cash(summary.owed)}</p>${c.policies.map(p=>`<div class="alert"><h4>${esc(p.title)} · ${esc(fa(p.number))}</h4><p>مبلغ قرارداد: ${cash(p.total)}</p><h4>پرداخت‌ها</h4>${p.payments.length?p.payments.map(r=>`<p>${cash(r.amount)} · ${dateLabel(r.date)} · ${r.voidedAt?'لغوشده':'فعال'} ${esc(r.note)}</p>`).join(''):'<p>پرداختی ثبت نشده است.</p>'}<h4>برنامه اقساط</h4>${p.installments.map(i=>`<p>${dateLabel(i.dueDate)} · ${cash(i.amount)}</p>`).join('')}</div>`).join('')}`;
+}
 function showCloudConflict(id){const c=data.cloud?.conflicts[id];if(!c)return;
-  openDialog(`${modalTitle('مقایسه دو نسخه','انتخاب شما کل همین پرونده را تعیین می‌کند. سایر مشتریان تغییر نمی‌کنند. هر دو نسخه در سابقه تصمیم نگه داشته می‌شوند.')}<p>پیش از انتخاب، مبالغ و پرداخت‌های هر دو نسخه را بررسی کنید. پرداخت موجود فقط در نسخه انتخاب‌نشده به حساب فعال اضافه نمی‌شود.</p><div class="backup-grid">${['local','remote'].map(side=>`<section><h3>${side==='local'?'این دستگاه':'نسخه آنلاین'}</h3><pre class="sync-json" dir="ltr">${esc(JSON.stringify(c[side],null,2))}</pre>${c[side]?button('انتخاب همین نسخه','cloud-resolve','secondary','check',`data-id="${esc(id)}" data-choice="${side}"`):''}</section>`).join('')}</div>${button('دریافت هر دو نسخه','cloud-conflict-backup','secondary','backup',`data-id="${esc(id)}"`)}<label class="confirm-check"><input type="checkbox" id="cloud-resolution-confirm">هر دو نسخه را بررسی کردم و انتخاب کل پرونده را تأیید می‌کنم.</label><div class="form-error" id="form-error" role="alert"></div>`);
+  openDialog(`${modalTitle('مقایسه دو نسخه','انتخاب شما کل همین پرونده را تعیین می‌کند. سایر مشتریان تغییر نمی‌کنند. هر دو نسخه در سابقه تصمیم نگه داشته می‌شوند.')}<p>پیش از انتخاب، مبالغ و پرداخت‌های هر دو نسخه را بررسی کنید. پرداخت موجود فقط در نسخه انتخاب‌نشده به حساب فعال اضافه نمی‌شود.</p><div class="backup-grid">${['local','remote'].map(side=>`<section><h3>${side==='local'?'این دستگاه':'نسخه آنلاین'}</h3>${conflictCustomer(c[side])}${c[side]?button('انتخاب همین نسخه','cloud-resolve','secondary','check',`data-id="${esc(id)}" data-choice="${side}"`):''}</section>`).join('')}</div>${button('دریافت هر دو نسخه','cloud-conflict-backup','secondary','backup',`data-id="${esc(id)}"`)}<label class="confirm-check"><input type="checkbox" id="cloud-resolution-confirm">هر دو نسخه را بررسی کردم و انتخاب کل پرونده را تأیید می‌کنم.</label><div class="form-error" id="form-error" role="alert"></div>`);
 }
 document.addEventListener('click',async event=>{
   const b=event.target.closest('[data-action]');if(!b)return;const action=b.dataset.action;

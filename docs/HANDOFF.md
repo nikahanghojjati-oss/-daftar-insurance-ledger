@@ -64,3 +64,5 @@ Synchronization occurs at startup, focus/visibility return, reconnect, explicit 
 Initial connection requires an explicit backup and preview. A nonempty local ledger is combined with cloud data, never replaced. Different stable IDs remain separate even when names match. Same-field changes and invalid combined balances produce conflicts. The whole-customer resolution screen retains both originals in decision history and downloadable backups. Restore-as-replacement and currency changes are refused after connecting. The father can be signed in once by the owner on each device. Clearing browser storage requires sign-in and connection review again.
 
 Validation and remaining gates are recorded in VALIDATION.md. Live two-device acceptance, physical phone/offline checks, and migration of real records have NOT been performed. Never claim them from the in-memory tests alone.
+
+Firestore emulator CI passed on run 41568147086: all three owner/anonymous/other-user authorization test groups passed, plus all 52 Node checks. Live rules still deny-all; no production customer records were created.
