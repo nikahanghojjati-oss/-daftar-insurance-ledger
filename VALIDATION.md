@@ -72,3 +72,10 @@ The online server clock was observed on the published GitHub Pages host using a 
 ## Firebase rules control-plane preparation — 2026-11-02 ET
 
 35 Node tests pass, including three checks for the manual-only workflow, fixed repo/main/project, missing credential refusal and blocked publication of the deny-all placeholder. The workflow YAML parses and the publisher script passes `node --check`. No GitHub Secret is present or verified yet, and no Firebase Rules or customer data was mutated. A first successful manual `verify` workflow, then UID-scoped rules/emulator tests and two-device sync acceptance are still required.
+
+
+## Sync continuation — 2026-11-02 ET
+
+52 local Node tests pass, including 17 new sync checks. Coverage: two independent persisted engine states; first upload and second-device join; separate offline receipts; concurrent same-field conflict; independent fields/customers; merged-overpayment refusal; lost write response and closure/retry; stale update-time precondition; local edit during upload; cancellation/restore; stale join preview; different currencies; conflict originals retained across later remote updates; failed server readback; portable backup excludes device queue; password never persisted; wrong-account refusal; token refresh; REST pagination/preconditions; incremental changed-customer reads. Existing calendar, finance, recovery and offline-shell tests still pass; offline shell now includes all four local sync modules. Syntax checks pass.
+
+The sync engine tests use a fake remote with persisted independent device states. They do NOT establish real Firestore or physical two-device correctness. A separate Firebase sync acceptance workflow runs the candidate rules in the Firestore emulator with owner/other-user/anonymous contexts. Emulator result is pending when this branch is first prepared. Live rules remain deny-all. No real records were uploaded. Live browser verification and real two-device acceptance are still required before migration.

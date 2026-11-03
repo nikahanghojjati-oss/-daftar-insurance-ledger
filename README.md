@@ -52,3 +52,8 @@ The displayed current date uses Tehran time from the current clock and refreshes
 ## Firebase rules access (owner setup pending)
 
 The owner can connect a dedicated rules-only service account through the encrypted GitHub Actions secret `FIREBASE_RULES_SERVICE_ACCOUNT_JSON`. Follow the [Chromebook owner setup guide](docs/FIREBASE_OWNER_SETUP.fa.md). A manual workflow verifies read-only Rules API access; publishing is blocked by a deny-all placeholder until reviewed UID-scoped rules and the sync client are ready. This key never enters GitHub Pages or the chat. No Firebase verification or customer sync has occurred yet.
+
+
+### Sync preparation (2026-11-02 ET)
+
+The continuation branch includes an optional local-first Firebase REST sync implementation and candidate UID-scoped rules. The console setup and rules-only GitHub access are verified. Cloud customer access is still disabled by the live deny-all rules. See the latest HANDOFF and VALIDATION sections for implemented behavior, evidence and remaining acceptance gates. Never migrate real customer records before those gates pass.

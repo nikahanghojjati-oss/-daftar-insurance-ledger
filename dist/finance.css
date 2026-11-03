@@ -5,3 +5,7 @@
 .installment-edit .field{min-width:0}
 .installment-edit input{width:100%}
 .schedule-edit-btn{margin:3px 17px 12px}
+
+
+.sync-json{white-space:pre-wrap;overflow-wrap:anywhere;max-height:24rem;overflow:auto;font-size:.8rem;text-align:left;padding:1rem;background:#f5f7fa;border-radius:.7rem}
+#cloud-login-form input{display:block;width:100%;padding:.8rem;margin:.4rem 0 1rem}
