@@ -39,8 +39,12 @@ Career Mode Showdown استفاده نکنید. انتشار سایت همچنا
 1. [Service Accounts در Google Cloud](https://console.cloud.google.com/iam-admin/serviceaccounts?project=daftar-insurance-ledger)
    را با **همان حساب Google صاحب پروژه** باز کنید. در بالای صفحه پروژهٔ
    `daftar-insurance-ledger` را انتخاب کنید.
-2. **Create service account** را بزنید. نام پیشنهادی:
-   `daftar-firestore-rules-deployer`؛ توضیح: `Deploy only Daftar Firestore rules from GitHub Actions`.
+2. **Create service account** را بزنید. در **Service account name** نام نمایشی
+   `Daftar Firestore Rules Deployer` را بگذارید. در کادر جداگانهٔ **Service account ID**
+   مقدار کوتاه `daftar-rules-deployer` را وارد کنید؛ شناسه باید حداکثر ۳۰ نویسه باشد
+   و از نام بلندِ حذف‌شدهٔ قبلی استفاده نکنید. توضیح:
+   `Deploy only Daftar Firestore rules from GitHub Actions`. سپس **Create and continue**
+   را بزنید تا مرحلهٔ نقش‌ها باز شود.
 3. در مرحلهٔ **Grant this service account access to project** فقط نقش
    **Firebase Rules Admin** (`roles/firebaserules.admin`) را بدهید و Done را بزنید.
    نقش Owner، Editor، Firebase Admin، Firestore Data Admin یا Billing Admin لازم نیست.
