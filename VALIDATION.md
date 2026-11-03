@@ -95,3 +95,7 @@ Live Chrome visual QA after PR #5: dashboard, customer profile and payment form 
 ## Galaxy A20 UI target
 
 The owner supplied Galaxy A20 SM-A205F/DS and 720×1560 physical panel pixels. CSS viewport is not established by those physical specs. Browser QA targets 360×780, 360×660 with browser space reserved, and a reduced 360×480 form viewport. This is responsive-layout verification, not a test on the father's actual handset or its keyboard. All 54 Node checks remain applicable; no new tests mirror the CSS. Desktop and larger-phone styles remain outside the new ≤400px overrides.
+
+## Recurring calendar default
+
+57 local tests pass after correcting the default to one Persian calendar month plus 15 days for each successive installment. Three new regression cases cover the complete expected date sequence, custom first dates, non-leap Esfand clamping (calendar recurrence differs from a fixed 45 days), exact totals, backup acceptance, and unchanged explicit monthly/weekly intervals. Existing persisted schedules are not regenerated. Source syntax and diff checks pass. Live form verification follows deployment.

@@ -79,3 +79,27 @@ test('Backup round trip and strict invalid-file rejection',()=>{
   corrupt(d=>d.customers[1].id=d.customers[0].id);corrupt(d=>d.customers[0].policies[0].installments[0].amount++);corrupt(d=>d.customers[0].policies[0].payments[0].amount=999999999999);corrupt(d=>d.customers[0].policies[0].payments[0].date='2026-02-30');corrupt(d=>d.customers[0].name='<'.repeat(101));
   for(const b of bad)assert.throws(()=>validateLedger(b));
 });
+
+
+
+test('New policies default to a Persian month plus 15 days for EVERY installment',()=>{
+  const input={title:'بیمه',total:'۱۰۰۱',down:'۱۰۱',count:'۵',plan:'installments',paymentDate:'۱۴۰۴/۱۲/۰۵'};
+  const p=makePolicy(input),regular=p.installments.filter(i=>i.kind==='regular');
+  assert.equal(p.frequency,'month-plus-15');
+  assert.deepEqual(regular.map(i=>dateInput(i.dueDate)),['۱۴۰۵/۰۱/۲۰','۱۴۰۵/۰۳/۰۴','۱۴۰۵/۰۴/۱۹','۱۴۰۵/۰۶/۰۳','۱۴۰۵/۰۷/۱۸']);
+  for(let n=1;n<regular.length;n++)assert.equal(regular[n].dueDate,firstInsuranceDue(regular[n-1].dueDate));
+  assert.equal(p.installments.reduce((sum,i)=>sum+i.amount,0),1001);assert.equal(policySummary(p).owed,900);
+  const restored=validateLedger(JSON.parse(JSON.stringify({...emptyLedger('toman'),customers:[{id:'customer',name:'آزمایش',phone:'',notes:'',policies:[p]}]})));
+  assert.equal(restored.customers[0].policies[0].frequency,'month-plus-15');
+});
+test('Calendar-plus-15 recurrence clamps Esfand correctly and supports a custom first date',()=>{
+  const p=makePolicy({title:'بیمه',total:'۱۰۰۰',down:'۱۰۰',count:'۳',plan:'installments',frequency:'month-plus-15',paymentDate:'۱۴۰۴/۱۱/۰۱',firstDate:'۱۴۰۴/۱۱/۳۰'});
+  assert.deepEqual(p.installments.filter(i=>i.kind==='regular').map(i=>dateInput(i.dueDate)),['۱۴۰۴/۱۱/۳۰','۱۴۰۵/۰۱/۱۵','۱۴۰۵/۰۲/۳۰']);
+  assert.equal(addDays(parseDate('۱۴۰۴/۱۱/۳۰'),45),parseDate('۱۴۰۵/۰۱/۱۶'));
+});
+test('Explicit monthly and weekly choices retain their original spacing',()=>{
+  const args={title:'بیمه',total:'۱۰۰۰',down:'۱۰۰',count:'۳',plan:'installments',paymentDate:'۱۴۰۴/۱۲/۰۵'};
+  const monthly=makePolicy({...args,frequency:'monthly'}).installments.filter(i=>i.kind==='regular');
+  const weekly=makePolicy({...args,frequency:'weekly'}).installments.filter(i=>i.kind==='regular');
+  assert.equal(dateInput(monthly[1].dueDate),'۱۴۰۵/۰۲/۲۰');assert.equal(weekly[1].dueDate,addDays(weekly[0].dueDate,7));
+});

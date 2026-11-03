@@ -66,12 +66,13 @@ export function addMonths(iso,n) {
 }
 export const firstInsuranceDue=issued=>addDays(addMonths(issued,1),15);
 export function makePolicy(input) {
+  const frequency=input.frequency || 'month-plus-15';
   const total=amount(input.total),cash=input.plan==='cash',down=cash?total:amount(input.down || '0'),count=cash?0:amount(input.count || '1');
   if(total<=0) throw new Error('مبلغ کل بیمه باید بیشتر از صفر باشد.');
   if(down>total) throw new Error('پیش‌پرداخت نمی‌تواند بیشتر از مبلغ کل باشد.');
   if(!cash&&(count<1 || count>6)) throw new Error('تعداد اقساط باید بین ۱ تا ۶ باشد.');
   if(!cash&&input.plan==='installments'&&(down<=0||down>=total))throw new Error('برای پرداخت اقساطی، پیش‌پرداخت باید بیشتر از صفر و کمتر از مبلغ کل باشد.');
-  if(!cash&&!['monthly','weekly'].includes(input.frequency)) throw new Error('دوره قسط معتبر نیست.');
+  if(!cash&&!['month-plus-15','monthly','weekly'].includes(frequency)) throw new Error('دوره قسط معتبر نیست.');
   const remaining=total-down;
   if(remaining>0 && count>remaining) throw new Error('مبلغ هر قسط باید دست‌کم یک واحد باشد.');
   if(input.installmentDates&&input.installmentDates.length!==count||input.installmentAmounts&&input.installmentAmounts.length!==count)throw new Error('تعداد ردیف‌های اقساط با تعداد انتخاب‌شده برابر نیست.');
@@ -86,8 +87,10 @@ export function makePolicy(input) {
   }
   if(remaining) {
     const base=Math.floor(remaining/count);
+    let previousDue=first;
     for(let i=0;i<count;i++) {
-      const dueDate=input.installmentDates?.[i]?parseDate(input.installmentDates[i]):input.frequency==='weekly'?addDays(first,i*7):addMonths(first,i);
+      const dueDate=input.installmentDates?.[i]?parseDate(input.installmentDates[i]):frequency==='weekly'?addDays(first,i*7):frequency==='month-plus-15'?(i===0?first:firstInsuranceDue(previousDue)):addMonths(first,i);
+      previousDue=dueDate;
       const value=input.installmentAmounts?.[i]!==undefined?amount(input.installmentAmounts[i]):i===count-1?remaining-base*(count-1):base;
       if(value<=0)throw new Error('مبلغ هر قسط باید بیشتر از صفر باشد.');
       installments.push({id:uid(),dueDate,amount:value,kind:'regular'});
@@ -95,7 +98,7 @@ export function makePolicy(input) {
     if(installments.filter(i=>i.kind==='regular').reduce((sum,i)=>sum+i.amount,0)!==remaining)throw new Error('جمع مبلغ اقساط باید دقیقاً برابر مانده پس از پیش‌پرداخت باشد.');
   }
   installments.sort((a,b)=>a.dueDate.localeCompare(b.dueDate) || (a.kind==='down'?-1:1));
-  return {id:uid(),title:String(input.title||'بیمه‌نامه').trim().slice(0,100),number:String(input.number||'').trim().slice(0,80),total,frequency:cash?'cash':input.frequency,installments,payments};
+  return {id:uid(),title:String(input.title||'بیمه‌نامه').trim().slice(0,100),number:String(input.number||'').trim().slice(0,80),total,frequency:cash?'cash':frequency,installments,payments};
 }
 export function reviseSchedule(policy,rows,at=new Date().toISOString()){
   const regular=policy.installments.filter(i=>i.kind==='regular');
@@ -171,7 +174,7 @@ export function validateLedger(data) {
     if(c.revisions!==undefined){if(!Array.isArray(c.revisions)||c.revisions.length>1000)fail();for(const r of c.revisions){timestamp(r.at);str(r.name,100);str(r.phone,30);str(r.notes,1000);}}
     if(!Array.isArray(c.policies)||c.policies.length>1000)fail();
     for(const p of c.policies) {
-      id(p.id);str(p.title,100);str(p.number,80);num(p.total);if(!['weekly','monthly','cash'].includes(p.frequency))fail();
+      id(p.id);str(p.title,100);str(p.number,80);num(p.total);if(!['month-plus-15','weekly','monthly','cash'].includes(p.frequency))fail();
       if(!Array.isArray(p.installments)||!p.installments.length||p.installments.length>121||!Array.isArray(p.payments)||p.payments.length>10000)fail();
       let sum=0,previous='';
       for(const i of p.installments) {id(i.id);num(i.amount);iso(i.dueDate);if(!['down','regular'].includes(i.kind)||i.dueDate<previous)fail();previous=i.dueDate;sum+=i.amount;}
@@ -204,3 +207,4 @@ export function demoLedger() {
   }
   return d;
 }
+
