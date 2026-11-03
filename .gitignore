@@ -1,0 +1,18 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.firebase/
+.openai/
+*.log
+*.zip
+*.tar.gz
+.DS_Store
+*service-account*.json
+*serviceAccount*.json
+*adminsdk*.json
+# Customer backup exports are device-private.
+daftar-demo-*.json
+daftar-own-*.json
+daftar-before-restore-*.json
+daftar-recovery.json
