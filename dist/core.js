@@ -48,37 +48,65 @@ export function dateInput(iso) {
 export function dateLabel(iso,year=true) {
   const p=jparts(iso); return `${fa(p.d)} ${MONTHS[p.m-1]}${year?' '+fa(p.y):''}`;
 }
-export function today() {
-  const p=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+let clockOffset=0;
+export function setClockOffset(milliseconds=0) {
+  if(!Number.isFinite(milliseconds)||Math.abs(milliseconds)>365*DAY)throw new Error('ساعت سرور معتبر نیست.');
+  clockOffset=milliseconds;
+}
+export function tehranDay(time) {
+  const p=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(time));
   const a=Object.fromEntries(p.map(x=>[x.type,x.value]));return `${a.year}-${a.month}-${a.day}`;
 }
+export function today(){return tehranDay(Date.now()+clockOffset);}
 export const addDays=(iso,n)=>new Date(Date.parse(iso+'T12:00:00Z')+n*DAY).toISOString().slice(0,10);
 export function addMonths(iso,n) {
   const p=jparts(iso),index=(p.y*12+p.m-1)+n,y=Math.floor(index/12),m=index%12+1;
   for(let d=p.d;d>=1;d--) {try{return fromJalali(y,m,d);}catch{}}
   throw new Error('تاریخ قسط خارج از محدوده مجاز است.');
 }
+export const firstInsuranceDue=issued=>addDays(addMonths(issued,1),15);
 export function makePolicy(input) {
-  const total=amount(input.total),down=amount(input.down || '0'),count=amount(input.count || '1');
+  const total=amount(input.total),cash=input.plan==='cash',down=cash?total:amount(input.down || '0'),count=cash?0:amount(input.count || '1');
   if(total<=0) throw new Error('مبلغ کل بیمه باید بیشتر از صفر باشد.');
   if(down>total) throw new Error('پیش‌پرداخت نمی‌تواند بیشتر از مبلغ کل باشد.');
-  if(count<1 || count>120) throw new Error('تعداد اقساط باید بین ۱ تا ۱۲۰ باشد.');
-  if(!['monthly','weekly'].includes(input.frequency)) throw new Error('دوره قسط معتبر نیست.');
+  if(!cash&&(count<1 || count>6)) throw new Error('تعداد اقساط باید بین ۱ تا ۶ باشد.');
+  if(!cash&&input.plan==='installments'&&(down<=0||down>=total))throw new Error('برای پرداخت اقساطی، پیش‌پرداخت باید بیشتر از صفر و کمتر از مبلغ کل باشد.');
+  if(!cash&&!['monthly','weekly'].includes(input.frequency)) throw new Error('دوره قسط معتبر نیست.');
   const remaining=total-down;
   if(remaining>0 && count>remaining) throw new Error('مبلغ هر قسط باید دست‌کم یک واحد باشد.');
-  const first=parseDate(input.firstDate),paymentDate=parseDate(input.paymentDate || dateInput(today()));
+  if(input.installmentDates&&input.installmentDates.length!==count||input.installmentAmounts&&input.installmentAmounts.length!==count)throw new Error('تعداد ردیف‌های اقساط با تعداد انتخاب‌شده برابر نیست.');
+  const paymentDate=parseDate(input.paymentDate || dateInput(today()));
+  const first=cash?null:parseDate(input.firstDate || dateInput(firstInsuranceDue(paymentDate)));
   if(down && paymentDate>today()) throw new Error('تاریخ پرداخت واقعی نباید در آینده باشد.');
+  if(first&&first<=paymentDate&&input.plan==='installments')throw new Error('اولین قسط باید پس از تاریخ شروع بیمه باشد.');
   const installments=[],payments=[];
   if(down) {
     installments.push({id:uid(),dueDate:paymentDate,amount:down,kind:'down'});
-    payments.push({id:uid(),amount:down,date:paymentDate,note:'پیش‌پرداخت'});
+    payments.push({id:uid(),amount:down,date:paymentDate,note:cash?'پرداخت نقدی':'پیش‌پرداخت'});
   }
   if(remaining) {
     const base=Math.floor(remaining/count);
-    for(let i=0;i<count;i++) installments.push({id:uid(),dueDate:input.frequency==='weekly'?addDays(first,i*7):addMonths(first,i),amount:i===count-1?remaining-base*(count-1):base,kind:'regular'});
+    for(let i=0;i<count;i++) {
+      const dueDate=input.installmentDates?.[i]?parseDate(input.installmentDates[i]):input.frequency==='weekly'?addDays(first,i*7):addMonths(first,i);
+      const value=input.installmentAmounts?.[i]!==undefined?amount(input.installmentAmounts[i]):i===count-1?remaining-base*(count-1):base;
+      if(value<=0)throw new Error('مبلغ هر قسط باید بیشتر از صفر باشد.');
+      installments.push({id:uid(),dueDate,amount:value,kind:'regular'});
+    }
+    if(installments.filter(i=>i.kind==='regular').reduce((sum,i)=>sum+i.amount,0)!==remaining)throw new Error('جمع مبلغ اقساط باید دقیقاً برابر مانده پس از پیش‌پرداخت باشد.');
   }
   installments.sort((a,b)=>a.dueDate.localeCompare(b.dueDate) || (a.kind==='down'?-1:1));
-  return {id:uid(),title:String(input.title||'بیمه‌نامه').trim().slice(0,100),number:String(input.number||'').trim().slice(0,80),total,frequency:input.frequency,installments,payments};
+  return {id:uid(),title:String(input.title||'بیمه‌نامه').trim().slice(0,100),number:String(input.number||'').trim().slice(0,80),total,frequency:cash?'cash':input.frequency,installments,payments};
+}
+export function reviseSchedule(policy,rows,at=new Date().toISOString()){
+  const regular=policy.installments.filter(i=>i.kind==='regular');
+  if(!regular.length||!Array.isArray(rows)||rows.length!==regular.length)throw new Error('تعداد اقساط تغییر نکرده است؛ تاریخ و مبلغ ردیف‌های موجود را ویرایش کنید.');
+  const proposed=regular.map((old,n)=>({...old,dueDate:parseDate(rows[n].date),amount:amount(rows[n].amount)}));
+  if(proposed.some(i=>i.amount<=0)||proposed.some((i,n)=>n>0&&i.dueDate<proposed[n-1].dueDate))throw new Error('مبلغ هر قسط باید مثبت و تاریخ‌ها از قدیم به جدید باشند.');
+  const down=policy.installments.filter(i=>i.kind==='down'),sum=proposed.reduce((s,i)=>s+i.amount,0)+down.reduce((s,i)=>s+i.amount,0);
+  if(down.length&&proposed[0].dueDate<=down[0].dueDate)throw new Error('سررسید اولین قسط باید پس از پرداخت اولیه باشد.');
+  if(sum!==policy.total)throw new Error('جمع اقساط و پیش‌پرداخت باید دقیقاً برابر مبلغ کل بیمه باشد.');
+  const next=[...down,...proposed].sort((a,b)=>a.dueDate.localeCompare(b.dueDate)|| (a.kind==='down'?-1:1));
+  return {...policy,installments:next,scheduleHistory:[...(policy.scheduleHistory||[]),{at,previous:policy.installments.map(i=>({id:i.id,dueDate:i.dueDate,amount:i.amount}))}]};
 }
 export function policySummary(policy,asOf=today()) {
   const paid=policy.payments.filter(p=>!p.voidedAt).reduce((sum,p)=>sum+p.amount,0);let credit=paid;
@@ -143,11 +171,12 @@ export function validateLedger(data) {
     if(c.revisions!==undefined){if(!Array.isArray(c.revisions)||c.revisions.length>1000)fail();for(const r of c.revisions){timestamp(r.at);str(r.name,100);str(r.phone,30);str(r.notes,1000);}}
     if(!Array.isArray(c.policies)||c.policies.length>1000)fail();
     for(const p of c.policies) {
-      id(p.id);str(p.title,100);str(p.number,80);num(p.total);if(!['weekly','monthly'].includes(p.frequency))fail();
+      id(p.id);str(p.title,100);str(p.number,80);num(p.total);if(!['weekly','monthly','cash'].includes(p.frequency))fail();
       if(!Array.isArray(p.installments)||!p.installments.length||p.installments.length>121||!Array.isArray(p.payments)||p.payments.length>10000)fail();
       let sum=0,previous='';
       for(const i of p.installments) {id(i.id);num(i.amount);iso(i.dueDate);if(!['down','regular'].includes(i.kind)||i.dueDate<previous)fail();previous=i.dueDate;sum+=i.amount;}
       if(sum!==p.total)fail();let paid=0;
+      if(p.scheduleHistory!==undefined){if(!Array.isArray(p.scheduleHistory)||p.scheduleHistory.length>1000)fail();for(const h of p.scheduleHistory){timestamp(h.at);if(!Array.isArray(h.previous)||h.previous.length<1||h.previous.length>121)fail();for(const i of h.previous){str(i.id,100);iso(i.dueDate);num(i.amount);}}}
       for(const pmt of p.payments) {
         id(pmt.id);num(pmt.amount);iso(pmt.date);if(pmt.date>today())fail();str(pmt.note,500);
         if(pmt.createdAt!==undefined)timestamp(pmt.createdAt);

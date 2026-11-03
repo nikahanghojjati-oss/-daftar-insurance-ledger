@@ -19,6 +19,7 @@ jobs:
         run: |
           node --check dist/app.js
           node --check dist/core.js
+      node --check dist/clock.js
           node --check dist/offline.js
           node --check dist/sw.js
       - name: Test bookkeeping and offline behavior

@@ -14,7 +14,7 @@ Read README.md, docs/HANDOFF.md and VALIDATION.md before editing.
 - A beginner-friendly insurance customer ledger: search, profiles, policies, weekly/monthly installments, actual payments, paid/owed totals and remaining dates.
 - Keep the fictional demo ledger separate from the personal ledger.
 - Preserve payment IDs, cancellation audit history, schema-1 imports, schema-2 backups and unfinished-form recovery.
-- The current implementation is browser-local. Cloud synchronization is PLANNED, not implemented.
+- The current implementation is browser-local. Cloud synchronization is PLANNED, not implemented. Read docs/FIREBASE_SYNC_PLAN.md before touching Firebase.
 - Owner wants a dedicated GitHub repository and GitHub Pages, publicly accessible without ChatGPT sign-in.
 - Firebase project `daftar-insurance-ledger` was created in the owner's console; database/auth/hosting configuration is unverified. Do not treat it as deployed sync.
 - Keep Firebase Spark-only, with billing unlinked. Do not upgrade or add chargeable services.

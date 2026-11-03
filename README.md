@@ -4,9 +4,9 @@
 
 This is the standalone GitHub Pages source. The application is fully static; `dist/` is the publication directory. GitHub Actions runs the tests before publishing. In repository Settings → Pages, set the source to GitHub Actions. Repository: https://github.com/nikahanghojjati-oss/-daftar-insurance-ledger
 
-GitHub Pages publication requires Settings → Pages → Source: GitHub Actions. The workflow will publish after that setting is enabled. Do not treat a guessed github.io URL as a verified deployment.
+GitHub Pages is live: https://nikahanghojjati-oss.github.io/-daftar-insurance-ledger/.
 
-**Current data status: browser-local; automatic cloud sync is not yet implemented.** A Firebase project was created separately; see the handoff for verified and unverified setup details.
+**Current data status: browser-local; automatic cloud sync is not yet implemented.** A Firebase project was created separately; see [the sync implementation gate](docs/FIREBASE_SYNC_PLAN.md) for the console inputs and reconciliation design.
 
 
 Publicly accessible, buildless, browser-local prototype for a beginner. No API, AI, remote customer storage, analytics, CDN, or external font dependencies.
@@ -43,3 +43,8 @@ Offline app use requires an initial HTTPS visit and a completed “آماده ا
 Hesabfa login computed body/input font: Iransans-web, Tahoma, sans-serif. Mahak marketing CSS uses Peyda. These observations establish the specific web pages, not every installed edition. The app bundles Vazirmatn v33.003 (111,152 bytes), SIL OFL 1.1 license included. Existing font sizes are preserved. No CDN is needed.
 
 Offline setup now detects a failed worker installation, bounds stalled readiness, verifies the full current-version cache (including the font), and offers an actionable Farsi error plus retry. Cached assets load directly; navigation falls back after a bounded network attempt. Changes do not alter the customer ledger schema or storage keys.
+
+## Insurance payment defaults (new)
+Pay in full on the policy start date, or record a real down payment and one to six interest-free installments. The first due date defaults to one Jalali month plus 15 days after the start (Esfand 5 → Farvardin 20); the rest default to anchored Jalali months. The down-payment percent, amount, first due date, installment dates and installment amounts are editable. A saved schedule can be revised without changing the original contract total or receipts; old schedule values are retained in the audit history.
+
+The displayed current date uses Tehran time from the current clock and refreshes after midnight, on focus and on page return. Online, a fresh same-origin server Date header is checked; offline, the device clock is required and the UI says so. No offline app can guarantee an authoritative date if that clock is wrong.

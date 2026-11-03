@@ -1,4 +1,4 @@
-export const OFFLINE_CACHE='daftar-shell-v6';
+export const OFFLINE_CACHE='daftar-shell-v7';
 
 function bounded(promise,ms,message){
   let timer;
