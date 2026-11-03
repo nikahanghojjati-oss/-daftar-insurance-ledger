@@ -1,5 +1,6 @@
 import {prepareOffline} from './offline.js';
 import {verifyClock} from './clock.js';
+import {LedgerSync,withLedgerLock,queueChanges,backupLedger} from './sync.js';
 import {CURRENCIES,MONTHS,digits,fa,normalize,money,amount,uid,today,addDays,firstInsuranceDue,dateInput,dateLabel,parseDate,makePolicy,reviseSchedule,recordPayment,similarPayments,voidPayment,restorePayment,policySummary,customerSummary,ledgerSummary,dueItems,validateLedger,emptyLedger,demoLedger} from './core.js';
 
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -8,22 +9,40 @@ const icon=(n,cls='')=>`<svg class="icon ${cls}" viewBox="0 0 24 24" fill="none"
 const STORE={demo:'daftar.demo.v1',own:'daftar.ledger.v1'},MODE='daftar.mode.v1';
 let mode='demo',data,baseRaw=null,storageOK=true,corrupt=false,view='home',selected=null,query='',filter='all',dueFilter='all',offlineReady=false,offlineIssue=false,offlineBusy=false,offlineMessage='در حال بررسی آفلاین…',offlineDetail='',importCandidate=null,toastTimer,shownDay=today(),clockVerified=false,lastClockCheck=0,clockBusy=false;
 try{mode=localStorage.getItem(MODE)==='own'?'own':'demo';const raw=localStorage.getItem(STORE[mode]);if(raw){data=validateLedger(JSON.parse(raw));baseRaw=raw;}else if(mode==='demo'){data=demoLedger();baseRaw=JSON.stringify(data);localStorage.setItem(STORE.demo,baseRaw);}else{mode='demo';data=demoLedger();baseRaw=JSON.stringify(data);localStorage.setItem(STORE.demo,baseRaw);}localStorage.setItem('daftar.storage-check','1');localStorage.removeItem('daftar.storage-check');}catch(e){storageOK=false;try{corrupt=!!localStorage.getItem(STORE[mode]);}catch{}data=demoLedger();}
+function readOwn(){const raw=localStorage.getItem(STORE.own);return raw?validateLedger(JSON.parse(raw)):null;}
+function ownConnected(){try{return !!readOwn()?.cloud;}catch{return false;}}
+let syncTimer;
+const sync = new LedgerSync({read:readOwn,write:next=>{
+  if($('#dialog').open && $('#dialog').querySelector('#customer-form,#policy-form,#payment-form,#schedule-form'))throw Error('FORM_IN_PROGRESS');
+  next.revision=uid();next.updatedAt=new Date().toISOString();
+  const raw=JSON.stringify(next);localStorage.setItem(STORE.own,raw);
+  if(mode==='own'){data=next;baseRaw=raw;}
+},changed:()=>{if(typeof data!=='undefined' && !$('#dialog').open)render();}});
+let syncFullRequested=false;
+function scheduleSync(full=true){syncFullRequested ||= full;clearTimeout(syncTimer);syncTimer=setTimeout(()=>{const requested=syncFullRequested;syncFullRequested=false;try{if(readOwn()?.cloud)sync.run({full:requested});}catch{sync.state('error','اطلاعات محلی قابل خواندن نیست؛ پشتیبان را بررسی کنید.');}},700);}
 const currency=()=>CURRENCIES[data.currency],cash=n=>`${money(n)} <small>${currency()}</small>`;
 const button=(label,action,cls='primary',ico='plus',attrs='')=>`<button class="btn ${cls}" data-action="${action}" ${attrs}>${ico?icon(ico):''}${label}</button>`;
 const badge=(text,type='neutral')=>`<span class="badge ${type}">${text}</span>`;
 const status=c=>c.owed===0?badge('تسویه‌شده','green'):c.overdue>0?badge('قسط عقب‌افتاده','red'):badge('در حال پرداخت','blue');
 const navs=[['home','home','خانه'],['customers','users','مشتریان'],['dues','calendar','سررسید اقساط'],['backup','backup','پشتیبان']];
 function toast(message,error=false){const t=$('#toast');t.textContent=message;t.className=error?'show error':'show';clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.className='',5500);}
-function commit(next){
+async function commit(next){
+ const expectedRaw=baseRaw,expectedMode=mode,previous=data;
+ const lock=navigator.locks||previous.cloud?withLedgerLock:task=>task();
+ return lock(()=>{
+  if(mode!==expectedMode)throw Error('دفتر فعال تغییر کرد؛ دوباره تلاش کنید.');
   if(!storageOK||corrupt)throw new Error('ذخیره‌سازی دستگاه در دسترس نیست. ابتدا مشکل ذخیره‌سازی یا فایل پشتیبان را بررسی کنید.');
+  next=queueChanges(previous,next);
   validateLedger(next);
-  if(localStorage.getItem(STORE[mode])!==baseRaw){reloadData();throw new Error('دفتر در پنجره دیگری تغییر کرده است. اطلاعات تازه شد؛ دوباره تلاش کنید.');}
+  if(localStorage.getItem(STORE[mode])!==expectedRaw){reloadData();throw new Error('دفتر در پنجره دیگری تغییر کرده است. اطلاعات تازه شد؛ دوباره تلاش کنید.');}
   next.revision=uid();next.updatedAt=new Date().toISOString();
   const raw=JSON.stringify(next);
   try{localStorage.setItem(STORE[mode],raw);}catch{throw new Error('اطلاعات ذخیره نشد. فضای دستگاه را بررسی کنید و دوباره تلاش کنید.');}
   data=next;baseRaw=raw;
+  scheduleSync(false);
+ });
 }
-function mutate(fn){const next=structuredClone(data);fn(next);commit(next);}
+async function mutate(fn){const next=structuredClone(data);fn(next);await commit(next);}
 function reloadData(){try{const raw=localStorage.getItem(STORE[mode]);if(!raw)throw Error();data=validateLedger(JSON.parse(raw));baseRaw=raw;closeDialog();render();}catch{corrupt=true;render();}}
 function switchMode(next){
   if(next==='own'&&!localStorage.getItem(STORE.own)){setup();return;}
@@ -32,9 +51,9 @@ function switchMode(next){
 function go(next,id=null){view=next;selected=id;query='';filter='all';render();window.scrollTo({top:0,behavior:'instant'});$('#main')?.focus({preventScroll:true});}
 function render(){
   const title=view==='profile'?'پرونده مشتری':navs.find(n=>n[0]===view)?.[2]||'خانه';shownDay=today();
-  $('#app').innerHTML=`<aside class="sidebar"><a class="brand" href="#" data-action="home"><span class="brand-mark">${icon('book')}</span><span>دفتر<small>حساب روشن، خیال آسوده</small></span></a><div class="nav-label">دفتر کار شما</div><nav aria-label="منوی اصلی">${navs.map(([id,ico,label])=>`<button data-action="nav" data-view="${id}" class="nav-item ${(view===id||(view==='profile'&&id==='customers'))?'active':''}" ${view===id?'aria-current="page"':''}>${icon(ico)}<span>${label}</span>${id==='dues'&&dueItems(data).some(i=>i.status==='overdue')?'<span class="nav-dot"></span>':''}</button>`).join('')}</nav><div class="sidebar-bottom"><div class="local-note">${icon('shield')}<div><b>اطلاعات روی همین دستگاه</b><span>بدون ارسال اطلاعات مشتریان</span></div></div><button class="help-link" data-action="help">${icon('help')}راهنمای استفاده</button><div class="sidebar-user"><span class="avatar mini">${icon('book')}</span><div><b>${mode==='demo'?'دفتر نمونه':'دفتر شخصی من'}</b><span>حساب مشتریان بیمه</span></div><span class="private-tag">روی دستگاه</span></div></div></aside>
+  $('#app').innerHTML=`<aside class="sidebar"><a class="brand" href="#" data-action="home"><span class="brand-mark">${icon('book')}</span><span>دفتر<small>حساب روشن، خیال آسوده</small></span></a><div class="nav-label">دفتر کار شما</div><nav aria-label="منوی اصلی">${navs.map(([id,ico,label])=>`<button data-action="nav" data-view="${id}" class="nav-item ${(view===id||(view==='profile'&&id==='customers'))?'active':''}" ${view===id?'aria-current="page"':''}>${icon(ico)}<span>${label}</span>${id==='dues'&&dueItems(data).some(i=>i.status==='overdue')?'<span class="nav-dot"></span>':''}</button>`).join('')}</nav><div class="sidebar-bottom"><div class="local-note">${icon('shield')}<div><b>اطلاعات روی همین دستگاه</b><span>${mode==='own'&&data.cloud?'همگام‌سازی خصوصی فعال':'همگام‌سازی هنوز متصل نیست'}</span></div></div><button class="help-link" data-action="help">${icon('help')}راهنمای استفاده</button><div class="sidebar-user"><span class="avatar mini">${icon('book')}</span><div><b>${mode==='demo'?'دفتر نمونه':'دفتر شخصی من'}</b><span>حساب مشتریان بیمه</span></div><span class="private-tag">روی دستگاه</span></div></div></aside>
   <div class="workspace"><header class="topbar"><span class="crumb">دفتر <span>/</span> <strong>${title}</strong></span><div class="topbar-right"><span id="connection" class="connection">${connectionText()}</span><span class="today">${icon('calendar')}<span id="today-label">${dateLabel(shownDay)}</span><small id="clock-status">${clockVerified?'تاریخ آنلاین بررسی شد':'ساعت دستگاه · در انتظار بررسی آنلاین'}</small></span></div></header><main id="main" tabindex="-1">
-  ${corrupt?recoveryView():`${saveStrip()}${draftBanner()}${!storageOK?'<div class="alert red">ذخیره‌سازی مرورگر فعال نیست. ثبت اطلاعات غیرفعال است؛ از مرورگر عادی و فضای کافی استفاده کنید.</div>':''}${mode==='demo'?`<div class="demo-banner"><span>${icon('info')}<span><b>این دفتر نمونه است.</b> با اطلاعات ساختگی تمرین کنید.</span></span>${button('شروع دفتر خودم','setup','light','arrow')}</div>`:''}${view==='home'?homeView():view==='customers'?customersView():view==='dues'?duesView():view==='backup'?backupView():profileView()}`}
+  ${corrupt?recoveryView():`${saveStrip()}${cloudStrip()}${draftBanner()}${!storageOK?'<div class="alert red">ذخیره‌سازی مرورگر فعال نیست. ثبت اطلاعات غیرفعال است؛ از مرورگر عادی و فضای کافی استفاده کنید.</div>':''}${mode==='demo'?`<div class="demo-banner"><span>${icon('info')}<span><b>این دفتر نمونه است.</b> با اطلاعات ساختگی تمرین کنید.</span></span>${button('شروع دفتر خودم','setup','light','arrow')}</div>`:''}${view==='home'?homeView():view==='customers'?customersView():view==='dues'?duesView():view==='backup'?backupView():profileView()}`}
   <footer class="footer"><span>${icon('shield')}اطلاعات روی همین دستگاه · بدون نیاز به ورود</span><span>همه مبلغ‌ها به ${currency()} · تاریخ‌ها شمسی</span></footer></main></div>
   <nav class="mobile-nav" aria-label="منوی تلفن">${navs.map(([id,ico,label])=>`<button data-action="nav" data-view="${id}" class="${view===id||(view==='profile'&&id==='customers')?'active':''}">${icon(ico)}<span>${id==='dues'?'اقساط':label}</span></button>`).join('')}</nav>`;
 }
@@ -71,15 +90,15 @@ function policyCard(c,p){
   <details class="history"><summary>سابقه پرداخت‌ها <span>${money(p.payments.filter(pmt=>!pmt.voidedAt).length)} پرداخت فعال${p.payments.some(pmt=>pmt.voidedAt)?' · '+money(p.payments.filter(pmt=>pmt.voidedAt).length)+' لغوشده':''}</span></summary>${p.payments.length?`<ul class="payment-history">${[...p.payments].reverse().map(pmt=>`<li class="${pmt.voidedAt?'void-payment':''}"><span class="history-check">${icon(pmt.voidedAt?'close':'check')}</span><div><b>${cash(pmt.amount)}</b><span>${dateLabel(pmt.date)}${pmt.note?' · '+esc(pmt.note):''}</span>${pmt.voidedAt?'<small>لغوشده · در جمع پرداخت‌ها حساب نمی‌شود</small>':pmt.revisions?.length?'<small>پس از لغو، دوباره فعال شده است</small>':''}</div><button class="text-btn ${pmt.voidedAt?'':'danger'}" data-action="${pmt.voidedAt?'restore-payment':'remove-payment'}" data-customer="${esc(c.id)}" data-policy="${esc(p.id)}" data-id="${esc(pmt.id)}">${pmt.voidedAt?'برگرداندن':'لغو ثبت'}</button></li>`).join('')}</ul>`:'<p class="empty-inline">هنوز پرداختی ثبت نشده است.</p>'}</details></section>`;
 }
 function emptyBlock(ico,title,text,action=''){return `<div class="empty-state"><span>${icon(ico)}</span><h3>${title}</h3><p>${text}</p>${action}</div>`;}
-function backupView(){return heading('دفترتان را نگه دارید','پشتیبان و تنظیمات','یک نسخه از دفتر بگیرید تا در دستگاه دیگری هم بتوانید آن را باز کنید.')+`<div class="backup-grid"><section class="panel backup-card"><span class="big-icon">${icon('backup')}</span><h2>دریافت فایل پشتیبان</h2><p>همه مشتریان، بیمه‌نامه‌ها و پرداخت‌ها در یک فایل ذخیره می‌شوند.</p><div class="backup-meta">${money(data.customers.length)} مشتری · واحد ${currency()}${mode==='demo'?' · اطلاعات نمونه':''}</div>${button('دریافت پشتیبان','export','primary','backup')}<small id="last-backup">${lastBackup()}</small></section><section class="panel backup-card"><span class="big-icon sand">${icon('file')}</span><h2>بازگرداندن پشتیبان</h2><p>فایل دفتر قبلی را انتخاب کنید. پیش از جایگزینی، خلاصه آن را می‌بینید.</p><div class="backup-meta">فقط فایل JSON ساخته‌شده در این برنامه</div>${button('انتخاب فایل پشتیبان','import','secondary','file')}<input type="file" accept=".json,application/json" id="import-file" hidden></section></div>
-  <section class="panel settings-card"><h2>دفتر فعلی</h2><dl><div><dt>نوع دفتر</dt><dd>${mode==='demo'?'نمونه (اطلاعات ساختگی)':'دفتر شخصی'}</dd></div><div><dt>واحد پول</dt><dd>${currency()} <small>بدون تبدیل خودکار واحد</small></dd></div><div><dt>آمادگی آفلاین</dt><dd id="offline-setting">${esc(offlineDescription())}</dd></div><div><dt>محل نگهداری</dt><dd>مرورگر همین دستگاه؛ همگام‌سازی خودکار ندارد.</dd></div></dl><div class="settings-actions">${offlineActions()}${mode==='demo'?button('شروع دفتر شخصی','setup','secondary','book'):button('تمرین در دفتر نمونه','demo','secondary','book')}${mode==='own'&&!data.customers.length?button('انتخاب دوباره واحد پول','currency','secondary','edit'):''}${button('راهنمای ساده','help','light','help')}</div></section><div class="backup-reminder">${icon('info')}پاک کردن داده‌های مرورگر یا استفاده از مرورگر خصوصی می‌تواند دفتر را از بین ببرد. پس از ثبت حساب‌ها پشتیبان بگیرید؛ فایل پشتیبان حاوی اطلاعات مشتریان است و باید نزد خودتان بماند.</div>`;}
+function backupView(){return cloudPanel()+heading('دفترتان را نگه دارید','پشتیبان و تنظیمات','یک نسخه از دفتر بگیرید تا در دستگاه دیگری هم بتوانید آن را باز کنید.')+`<div class="backup-grid"><section class="panel backup-card"><span class="big-icon">${icon('backup')}</span><h2>دریافت فایل پشتیبان</h2><p>همه مشتریان، بیمه‌نامه‌ها و پرداخت‌ها در یک فایل ذخیره می‌شوند.</p><div class="backup-meta">${money(data.customers.length)} مشتری · واحد ${currency()}${mode==='demo'?' · اطلاعات نمونه':''}</div>${button('دریافت پشتیبان','export','primary','backup')}<small id="last-backup">${lastBackup()}</small></section><section class="panel backup-card"><span class="big-icon sand">${icon('file')}</span><h2>بازگرداندن پشتیبان</h2><p>فایل دفتر قبلی را انتخاب کنید. پیش از جایگزینی، خلاصه آن را می‌بینید.</p><div class="backup-meta">فقط فایل JSON ساخته‌شده در این برنامه</div>${button('انتخاب فایل پشتیبان','import','secondary','file')}<input type="file" accept=".json,application/json" id="import-file" hidden></section></div>
+  <section class="panel settings-card"><h2>دفتر فعلی</h2><dl><div><dt>نوع دفتر</dt><dd>${mode==='demo'?'نمونه (اطلاعات ساختگی)':'دفتر شخصی'}</dd></div><div><dt>واحد پول</dt><dd>${currency()} <small>بدون تبدیل خودکار واحد</small></dd></div><div><dt>آمادگی آفلاین</dt><dd id="offline-setting">${esc(offlineDescription())}</dd></div><div><dt>محل نگهداری</dt><dd>${mode==='own'&&data.cloud?'روی این دستگاه و دفتر آنلاین خصوصی؛ وضعیت همگام‌سازی را بررسی کنید.':'مرورگر همین دستگاه؛ اتصال آنلاین هنوز انجام نشده است.'}</dd></div></dl><div class="settings-actions">${offlineActions()}${mode==='demo'?button('شروع دفتر شخصی','setup','secondary','book'):button('تمرین در دفتر نمونه','demo','secondary','book')}${mode==='own'&&!data.customers.length?button('انتخاب دوباره واحد پول','currency','secondary','edit'):''}${button('راهنمای ساده','help','light','help')}</div></section><div class="backup-reminder">${icon('info')}پاک کردن داده‌های مرورگر یا استفاده از مرورگر خصوصی می‌تواند دفتر را از بین ببرد. پس از ثبت حساب‌ها پشتیبان بگیرید؛ فایل پشتیبان حاوی اطلاعات مشتریان است و باید نزد خودتان بماند.</div>`;}
 function lastBackup(){try{const d=localStorage.getItem('daftar.backup.'+mode);return d?'آخرین فایل آماده‌شده: '+dateLabel(d):'پیشنهاد: پس از هر روز کاری پشتیبان بگیرید.';}catch{return '';}}
 function recoveryView(){return `<section class="panel backup-card"><h1>اطلاعات دفتر قابل خواندن نیست</h1><p>برای جلوگیری از از دست رفتن اطلاعات، هیچ تغییری در دفتر ذخیره‌شده نداده‌ایم. فایل فعلی را برای بررسی دریافت کنید یا پشتیبان سالم را بازگردانید.</p>${button('دریافت اطلاعات فعلی','export-raw','secondary','backup')}${button('بازگرداندن پشتیبان سالم','import','primary','file')}<input type="file" accept=".json,application/json" id="import-file" hidden></section>`;}
 function openDialog(content){const d=$('#dialog');d.innerHTML=`${content}<button class="dialog-close" data-action="close" aria-label="بستن">${icon('close')}</button>`;attachDraft(d.querySelector('form'));const discard=d.querySelector('[data-action="discard-draft"]');if(discard&&!d.querySelector('form')?.dataset.draftKey)discard.remove();if(!d.open)d.showModal();d.querySelector('[autofocus]')?.focus();}
 function closeDialog(){if($('#dialog').open)$('#dialog').close();importCandidate=null;}
 function modalTitle(title,subtitle){return `<div class="modal-head"><span class="eyebrow">${mode==='demo'?'تمرین در دفتر نمونه':'دفتر شخصی شما'}</span><h2 id="dialog-title">${title}</h2><p>${subtitle}</p></div>`;}
 function formFooter(label){return `<p class="draft-status" id="draft-status" role="status"></p><div class="form-error" role="alert" id="form-error"></div><div class="form-actions"><button class="btn primary" type="submit">${icon('check')}${label}</button><button class="btn secondary" type="button" data-action="close">بستن</button><button class="text-btn" type="button" data-action="discard-draft">پاک کردن فرم ناتمام</button></div>`;}
-function setup(change=false){if(!storageOK){toast('ذخیره‌سازی دستگاه فعال نیست.',true);return;}if(!change&&localStorage.getItem(STORE.own)){switchMode('own');return;}
+function setup(change=false){if(change&&readOwn()?.cloud){toast('واحد پول دفتر متصل قابل تغییر نیست.',true);return;}if(!storageOK){toast('ذخیره‌سازی دستگاه فعال نیست.',true);return;}if(!change&&localStorage.getItem(STORE.own)){switchMode('own');return;}
   openDialog(`${modalTitle('دفتر خودتان را شروع کنید','واحدی را انتخاب کنید که با آن حساب می‌کنید. هیچ مبلغی تبدیل نمی‌شود.')}<form id="setup-form"><div class="currency-choices"><label><input type="radio" name="currency" value="toman" required><span><b>تومان</b><small>همه مبلغ‌ها به تومان وارد می‌شوند</small></span></label><label><input type="radio" name="currency" value="rial" required><span><b>ریال</b><small>همه مبلغ‌ها به ریال وارد می‌شوند</small></span></label></div><div class="form-note">${icon('shield')}دفتر از ابتدا خالی است. اطلاعات نمونه وارد دفتر شما نمی‌شود.</div>${formFooter('شروع دفتر شخصی')}</form>`);
 }
 function customerForm(id=null){const c=data.customers.find(c=>c.id===id);openDialog(`${modalTitle(c?'ویرایش مشتری':'افزودن مشتری','نام مشتری کافی است؛ بقیه اطلاعات را می‌توانید بعداً کامل کنید.')}<form id="customer-form" data-id="${esc(id||'')}"><label class="field">نام و نام خانوادگی <span class="required">*</span><input name="name" required maxlength="100" value="${esc(c?.name||'')}" placeholder="مثلاً مریم احمدی" autofocus autocomplete="name"></label><label class="field">شماره تلفن <span class="optional">اختیاری</span><input name="phone" type="tel" maxlength="30" value="${esc(c?.phone||'')}" placeholder="۰۹۱۲…" autocomplete="tel" dir="ltr"></label><label class="field">یادداشت <span class="optional">اختیاری</span><textarea name="notes" rows="3" maxlength="1000" placeholder="توضیحی که بعداً به کارتان می‌آید">${esc(c?.notes||'')}</textarea></label>${formFooter(c?'ذخیره تغییرات':'ذخیره مشتری')}</form>`);}
@@ -116,30 +135,33 @@ function scheduleForm(customerId,policyId){
 }
 function paymentForm(customerId,policyId){const c=data.customers.find(c=>c.id===customerId),p=c.policies.find(p=>p.id===policyId),s=policySummary(p);if(!s.owed)return;openDialog(`${modalTitle('ثبت پرداخت',`${esc(c.name)} · ${esc(p.title)}`)}<div class="payment-balance"><span>مانده این بیمه‌نامه</span><strong>${cash(s.owed)}</strong></div><form id="payment-form" data-customer="${esc(customerId)}" data-policy="${esc(policyId)}"><label class="field">مبلغ دریافت‌شده <span class="required">*</span><div class="input-unit"><input name="amount" inputmode="numeric" required value="${money(s.next?.left||s.owed)}" maxlength="18" autofocus><span>${currency()}</span></div></label><label class="field">تاریخ دریافت (شمسی)<input name="date" class="date-input" inputmode="numeric" required value="${dateInput(today())}" dir="ltr"></label><label class="field">یادداشت <span class="optional">اختیاری</span><input name="note" maxlength="500" placeholder="مثلاً واریز به کارت"></label><div class="form-note">${icon('info')}پرداخت از قدیمی‌ترین قسط باز کم می‌شود. پرداخت بخشی از قسط هم امکان‌پذیر است.</div><div id="duplicate-warning"></div>${formFooter('ثبت و ذخیره پرداخت')}</form>`);}
 function confirmRemoval(customerId,policyId,paymentId){const c=data.customers.find(c=>c.id===customerId),p=c.policies.find(p=>p.id===policyId),payment=p.payments.find(p=>p.id===paymentId);openDialog(`${modalTitle('لغو ثبت پرداخت','اگر مبلغ یا تاریخ را اشتباه نوشته‌اید، ثبت را لغو و دوباره وارد کنید.')}<div class="alert">پرداخت ${cash(payment.amount)} در تاریخ ${dateLabel(payment.date)} برای ${esc(c.name)} لغو می‌شود و همین مبلغ به مانده بدهی برمی‌گردد. اصل پرداخت در سابقه می‌ماند و قابل برگرداندن است.</div><div class="form-error" role="alert" id="form-error"></div><div class="form-actions">${button('بله، لغو ثبت','confirm-remove','danger-btn','close',`data-customer="${esc(customerId)}" data-policy="${esc(policyId)}" data-id="${esc(paymentId)}"`)}${button('انصراف','close','secondary','')}</div>`);}
-function showHelp(){openDialog(`${modalTitle('دفتر، به زبان ساده','برای شروع فقط این سه کار را انجام دهید.')}<ol class="help-steps"><li><b>مشتری را اضافه کنید.</b><p>نام و در صورت نیاز شماره تماس را بنویسید.</p></li><li><b>بیمه‌نامه و اقساط را ثبت کنید.</b><p>مبلغ کل، پیش‌پرداخت واقعی و تعداد اقساط را وارد کنید.</p></li><li><b>هر بار پول گرفتید، «ثبت پرداخت» را بزنید.</b><p>مانده بدهی خودکار کم می‌شود؛ رسیدن سررسید به تنهایی بدهی را کم نمی‌کند.</p></li></ol><div class="help-notes"><p><b>بدون اینترنت:</b> پس از دیدن نشان «آماده استفاده آفلاین»، همین صفحه را حتی پس از بستن مرورگر هم می‌توانید باز کنید. برنامه روی همان مرورگر و دستگاه کار می‌کند.</p><p><b>تاریخ‌ها:</b> همه تاریخ‌ها شمسی‌اند. عدد فارسی، عربی و انگلیسی پذیرفته می‌شود. قسط ماهانه در ماه کوتاه‌تر به آخر ماه می‌رود و در ماه بعد به روز اصلی برمی‌گردد.</p><p><b>پشتیبان:</b> در بخش پشتیبان، فایل دفتر را دریافت کنید. برای انتقال به گوشی دیگر، همان فایل را بازگردانید. همگام‌سازی خودکار وجود ندارد.</p><p><b>نصب روی گوشی:</b> در منوی مرورگر «افزودن به صفحه اصلی» را انتخاب کنید. اعلان یا پیامک خودکار ارسال نمی‌شود.</p></div><div class="form-actions">${button('متوجه شدم','close','primary','check')}</div>`);}
+function showHelp(){openDialog(`${modalTitle('دفتر، به زبان ساده','برای شروع فقط این سه کار را انجام دهید.')}<ol class="help-steps"><li><b>مشتری را اضافه کنید.</b><p>نام و در صورت نیاز شماره تماس را بنویسید.</p></li><li><b>بیمه‌نامه و اقساط را ثبت کنید.</b><p>مبلغ کل، پیش‌پرداخت واقعی و تعداد اقساط را وارد کنید.</p></li><li><b>هر بار پول گرفتید، «ثبت پرداخت» را بزنید.</b><p>مانده بدهی خودکار کم می‌شود؛ رسیدن سررسید به تنهایی بدهی را کم نمی‌کند.</p></li></ol><div class="help-notes"><p><b>بدون اینترنت:</b> پس از دیدن نشان «آماده استفاده آفلاین»، همین صفحه را حتی پس از بستن مرورگر هم می‌توانید باز کنید. برنامه روی همان مرورگر و دستگاه کار می‌کند.</p><p><b>تاریخ‌ها:</b> همه تاریخ‌ها شمسی‌اند. عدد فارسی، عربی و انگلیسی پذیرفته می‌شود. قسط ماهانه در ماه کوتاه‌تر به آخر ماه می‌رود و در ماه بعد به روز اصلی برمی‌گردد.</p><p><b>پشتیبان:</b> در بخش پشتیبان، فایل دفتر را دریافت کنید. برای اتصال گوشی دیگر، در پشتیبان و تنظیمات، اتصال آنلاین را یک بار راه‌اندازی کنید. وضعیت «آنلاین بررسی شد» زمان آخرین بررسی را نشان می‌دهد؛ پس از ویرایش در دستگاه دیگر، همگام‌سازی را بزنید یا به این صفحه برگردید. بازگرداندن جایگزین فایل در دفتر متصل غیرفعال است.</p><p><b>نصب روی گوشی:</b> در منوی مرورگر «افزودن به صفحه اصلی» را انتخاب کنید. اعلان یا پیامک خودکار ارسال نمی‌شود.</p></div><div class="form-actions">${button('متوجه شدم','close','primary','check')}</div>`);}
 function download(content,name){const blob=new Blob([content],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);}
-function exportLedger(){download(JSON.stringify({...data,exportedAt:new Date().toISOString(),app:'daftar'},null,2),`daftar-${mode}-${today()}.json`);try{localStorage.setItem('daftar.backup.'+mode,today());localStorage.setItem('daftar.backup-revision.'+mode,data.revision||'legacy');}catch{}render();toast('فایل پشتیبان آماده شد؛ آن را در پوشه دانلودها نگه دارید.');}
+function exportLedger(){download(JSON.stringify({...backupLedger(data),exportedAt:new Date().toISOString(),app:'daftar'},null,2),`daftar-${mode}-${today()}.json`);try{localStorage.setItem('daftar.backup.'+mode,today());localStorage.setItem('daftar.backup-revision.'+mode,data.revision||'legacy');}catch{}render();toast('فایل پشتیبان آماده شد؛ آن را در پوشه دانلودها نگه دارید.');}
 async function importFile(file){
-  if(!file)return;if(file.size>10*1024*1024){toast('اندازه فایل باید کمتر از ۱۰ مگابایت باشد.',true);return;}
-  try{const candidate=validateLedger(JSON.parse(await file.text()));
+  if(!file)return;if(ownConnected()){toast('بازگرداندن جایگزین در دفتر متصل غیرفعال است. پشتیبان و سابقه فعلی نگه داشته می‌شود.',true);return;}if(file.size>10*1024*1024){toast('اندازه فایل باید کمتر از ۱۰ مگابایت باشد.',true);return;}
+  try{const candidate=backupLedger(validateLedger(JSON.parse(await file.text())));
     openDialog(`${modalTitle('بررسی فایل پشتیبان','پیش از بازگرداندن، اطلاعات فایل را بررسی کنید.')}<div class="import-summary"><b>${money(candidate.customers.length)} مشتری</b><span>واحد پول: ${CURRENCIES[candidate.currency]}</span><span>مانده کل: ${money(ledgerSummary(candidate).owed)} ${CURRENCIES[candidate.currency]}</span></div><div class="alert">این فایل جای دفتر شخصی فعلی را می‌گیرد. اطلاعات نمونه جدا می‌ماند. اگر دفتر شخصی دارید، ابتدا پشتیبان آن را دریافت کنید.</div>${button('دریافت پشتیبان دفتر فعلی','export-own','secondary','backup')}<label class="confirm-check"><input type="checkbox" id="restore-confirm">می‌دانم که دفتر شخصی فعلی جایگزین می‌شود.</label><div class="form-error" id="form-error" role="alert"></div><div class="form-actions">${button('بازگرداندن دفتر','confirm-import','primary','check')}${button('انصراف','close','secondary','')}</div>`);importCandidate={data:candidate,raw:localStorage.getItem(STORE.own)};
   }catch(e){toast(e.message.startsWith('فایل')?e.message:'فایل خوانده نشد. یک پشتیبان JSON سالم انتخاب کنید.',true);}
 }
 function formError(e){const box=$('#form-error');if(box){box.textContent=e.message;box.scrollIntoView({block:'nearest'});}else toast(e.message,true);}
-document.addEventListener('click',event=>{
+document.addEventListener('click',async event=>{
   const b=event.target.closest('[data-action]');if(!b)return;event.preventDefault();const a=b.dataset.action;
   try{
     if(a==='nav')go(b.dataset.view);else if(a==='home')go('home');else if(a==='profile')go('profile',b.dataset.id);else if(a==='close')closeDialog();else if(a==='setup')setup();else if(a==='currency')setup(true);else if(a==='demo'){if(!localStorage.getItem(STORE.demo))localStorage.setItem(STORE.demo,JSON.stringify(demoLedger()));switchMode('demo');}else if(a==='add-customer')customerForm();else if(a==='edit-customer')customerForm(b.dataset.id);else if(a==='add-policy')policyForm(b.dataset.id);else if(a==='pay')paymentForm(b.dataset.customer,b.dataset.id);else if(a==='edit-schedule')scheduleForm(b.dataset.customer,b.dataset.policy);else if(a==='filter'){filter=b.dataset.filter;render();}else if(a==='due-filter'){dueFilter=b.dataset.filter;render();}else if(a==='help')showHelp();else if(a==='export')exportLedger();else if(a==='export-raw')download(localStorage.getItem(STORE[mode])||'','daftar-recovery.json');else if(a==='import')$('#import-file').click();else if(a==='export-own'){const raw=localStorage.getItem(STORE.own);if(raw)download(raw,`daftar-before-restore-${today()}.json`);else toast('هنوز دفتر شخصی ذخیره‌شده‌ای ندارید.');}
     else if(a==='remove-payment')confirmRemoval(b.dataset.customer,b.dataset.policy,b.dataset.id);
-    else if(a==='confirm-remove'){mutate(d=>{const c=d.customers.find(c=>c.id===b.dataset.customer),idx=c.policies.findIndex(p=>p.id===b.dataset.policy);c.policies[idx]=voidPayment(c.policies[idx],b.dataset.id);});closeDialog();render();toast('پرداخت لغو شد؛ سابقه آن نگه داشته شد و می‌توانید آن را برگردانید.');}
-    else if(a==='restore-payment'){mutate(d=>{const c=d.customers.find(c=>c.id===b.dataset.customer),idx=c.policies.findIndex(p=>p.id===b.dataset.policy);c.policies[idx]=restorePayment(c.policies[idx],b.dataset.id);});render();toast('پرداخت دوباره فعال شد؛ مبلغ و شناسه آن حفظ شد.');}
+    else if(a==='confirm-remove'){await mutate(d=>{const c=d.customers.find(c=>c.id===b.dataset.customer),idx=c.policies.findIndex(p=>p.id===b.dataset.policy);c.policies[idx]=voidPayment(c.policies[idx],b.dataset.id);});closeDialog();render();toast('پرداخت لغو شد؛ سابقه آن نگه داشته شد و می‌توانید آن را برگردانید.');}
+    else if(a==='restore-payment'){await mutate(d=>{const c=d.customers.find(c=>c.id===b.dataset.customer),idx=c.policies.findIndex(p=>p.id===b.dataset.policy);c.policies[idx]=restorePayment(c.policies[idx],b.dataset.id);});render();toast('پرداخت دوباره فعال شد؛ مبلغ و شناسه آن حفظ شد.');}
     else if(a==='resume-draft')resumeDraft(b.dataset.key);
     else if(a==='discard-draft'){const f=$('#dialog form');discardDraft(f);closeDialog();render();toast('فرم ناتمام پاک شد؛ حساب‌ها تغییری نکرد.');}
     else if(a==='confirm-import'){
+      await withLedgerLock(()=>{
+      if(ownConnected())throw Error('دفتر متصل را نمی‌توان با پشتیبان جایگزین کرد.');
       if(!$('#restore-confirm').checked)throw new Error('برای ادامه، تأیید جایگزینی دفتر را علامت بزنید.');
       if(!importCandidate)throw Error('فایل پشتیبان را دوباره انتخاب کنید.');
       if(localStorage.getItem(STORE.own)!==importCandidate.raw)throw Error('دفتر در پنجره دیگری تغییر کرده است. فایل را دوباره انتخاب کنید.');
-      const next={...importCandidate.data,revision:uid(),updatedAt:new Date().toISOString()},raw=JSON.stringify(next);localStorage.setItem(STORE.own,raw);localStorage.setItem(MODE,'own');data=next;baseRaw=raw;mode='own';storageOK=true;corrupt=false;try{localStorage.removeItem('daftar.drafts.'+mode);}catch{}closeDialog();go('home');toast('پشتیبان بازگردانده شد. دفتر شخصی شما آماده است.');
+      const next={...backupLedger(importCandidate.data),revision:uid(),updatedAt:new Date().toISOString()},raw=JSON.stringify(next);localStorage.setItem(STORE.own,raw);localStorage.setItem(MODE,'own');data=next;baseRaw=raw;mode='own';storageOK=true;corrupt=false;try{localStorage.removeItem('daftar.drafts.'+mode);}catch{}closeDialog();go('home');toast('پشتیبان بازگردانده شد. دفتر شخصی شما آماده است.');
+      });
     }
   }catch(e){formError(e);}
 });
@@ -164,30 +186,33 @@ document.addEventListener('input',event=>{
   }
 });
 document.addEventListener('change',e=>{if(e.target.id==='import-file'){importFile(e.target.files[0]);e.target.value='';}});
-document.addEventListener('submit',event=>{
+document.addEventListener('submit',async event=>{
   event.preventDefault();const form=event.target,v=Object.fromEntries(new FormData(form)),submit=form.querySelector('[type="submit"]');
   if(submit)submit.disabled=true;
   try{
     if(form.id==='setup-form'){
+      await withLedgerLock(()=>{
       if(!Object.hasOwn(CURRENCIES,v.currency))throw new Error('واحد پول را انتخاب کنید.');
+      if(ownConnected())throw Error('دفتر متصل را نمی‌توان دوباره ایجاد کرد.');
       const existing=localStorage.getItem(STORE.own);if(existing&&validateLedger(JSON.parse(existing)).customers.length)throw new Error('دفتر شخصی اطلاعات دارد؛ واحد پول آن تغییر نمی‌کند.');
       const next=emptyLedger(v.currency),raw=JSON.stringify(next);localStorage.setItem(STORE.own,raw);localStorage.setItem(MODE,'own');mode='own';data=next;baseRaw=raw;closeDialog();go('customers');toast('دفتر شما آماده است. اولین مشتری را اضافه کنید.');
+      });
     }else if(form.id==='customer-form'){
       const name=v.name.trim();if(!name)throw new Error('نام مشتری را وارد کنید.');
-      const id=form.dataset.id||uid();mutate(d=>{const c=d.customers.find(c=>c.id===id);if(c){c.revisions=[...(c.revisions||[]),{at:new Date().toISOString(),name:c.name,phone:c.phone,notes:c.notes}];c.name=name;c.phone=digits(v.phone.trim());c.notes=v.notes.trim();}else d.customers.push({id,name,phone:digits(v.phone.trim()),notes:v.notes.trim(),policies:[]});});discardDraft(form);closeDialog();go('profile',id);toast('اطلاعات مشتری ذخیره شد.');
+      const id=form.dataset.id||uid();await mutate(d=>{const c=d.customers.find(c=>c.id===id);if(c){c.revisions=[...(c.revisions||[]),{at:new Date().toISOString(),name:c.name,phone:c.phone,notes:c.notes}];c.name=name;c.phone=digits(v.phone.trim());c.notes=v.notes.trim();}else d.customers.push({id,name,phone:digits(v.phone.trim()),notes:v.notes.trim(),policies:[]});});discardDraft(form);closeDialog();go('profile',id);toast('اطلاعات مشتری ذخیره شد.');
     }else if(form.id==='policy-form'){
-      const policy=makePolicy(policyValues(form));if(!policy.title.trim())throw new Error('نوع بیمه را وارد کنید.');mutate(d=>d.customers.find(c=>c.id===form.dataset.customer).policies.push(policy));discardDraft(form);closeDialog();render();toast('بیمه‌نامه و برنامه اقساط ذخیره شد.');
+      const policy=makePolicy(policyValues(form));if(!policy.title.trim())throw new Error('نوع بیمه را وارد کنید.');await mutate(d=>d.customers.find(c=>c.id===form.dataset.customer).policies.push(policy));discardDraft(form);closeDialog();render();toast('بیمه‌نامه و برنامه اقساط ذخیره شد.');
     }else if(form.id==='schedule-form'){
-      mutate(d=>{const c=d.customers.find(c=>c.id===form.dataset.customer),index=c.policies.findIndex(p=>p.id===form.dataset.policy),p=c.policies[index],rows=p.installments.filter(i=>i.kind==='regular').map((_,n)=>({date:v['date'+n],amount:v['amount'+n]}));c.policies[index]=reviseSchedule(p,rows);});closeDialog();render();toast('برنامه اقساط ویرایش شد؛ سابقه قبلی نگه داشته شد.');
+      await mutate(d=>{const c=d.customers.find(c=>c.id===form.dataset.customer),index=c.policies.findIndex(p=>p.id===form.dataset.policy),p=c.policies[index],rows=p.installments.filter(i=>i.kind==='regular').map((_,n)=>({date:v['date'+n],amount:v['amount'+n]}));c.policies[index]=reviseSchedule(p,rows);});closeDialog();render();toast('برنامه اقساط ویرایش شد؛ سابقه قبلی نگه داشته شد.');
     }else if(form.id==='payment-form'){
       v.id=form.dataset.operation;const policy=data.customers.find(c=>c.id===form.dataset.customer).policies.find(p=>p.id===form.dataset.policy);
       if(similarPayments(policy,v).length&&!$('#duplicate-confirm')?.checked){updateDuplicateWarning(form);throw new Error('پرداخت مشابهی ثبت شده است. اگر این دریافت جداگانه است، کادر تأیید را علامت بزنید.');}
-      mutate(d=>{const c=d.customers.find(c=>c.id===form.dataset.customer),idx=c.policies.findIndex(p=>p.id===form.dataset.policy);c.policies[idx]=recordPayment(c.policies[idx],v);});discardDraft(form);closeDialog();render();toast('پرداخت ذخیره شد؛ مانده حساب به‌روز است.');
+      await mutate(d=>{const c=d.customers.find(c=>c.id===form.dataset.customer),idx=c.policies.findIndex(p=>p.id===form.dataset.policy);c.policies[idx]=recordPayment(c.policies[idx],v);});discardDraft(form);closeDialog();render();toast('پرداخت ذخیره شد؛ مانده حساب به‌روز است.');
     }
   }catch(e){formError(e);}finally{if(submit)submit.disabled=false;}
 });
 window.addEventListener('storage',e=>{if(e.key===STORE[mode]&&e.newValue!==baseRaw){reloadData();toast('دفتر با تغییرات پنجره دیگر به‌روز شد.');}});
-window.addEventListener('online',()=>{updateConnection();checkClock();if(!offlineReady&&!offlineBusy)checkOffline();});window.addEventListener('offline',()=>{clockVerified=false;updateClockLabel();updateConnection();});
+window.addEventListener('online',()=>{scheduleSync();updateConnection();checkClock();if(!offlineReady&&!offlineBusy)checkOffline();});window.addEventListener('offline',()=>{clockVerified=false;updateClockLabel();updateConnection();});
 function updateClockLabel(){
   const current=today();if(current!==shownDay){if($('#dialog').open)$('#today-label').textContent=dateLabel(current);else render();shownDay=current;}
   const label=$('#today-label');if(label)label.textContent=dateLabel(current);
@@ -202,8 +227,8 @@ async function checkClock(){
 function refreshClock(){updateClockLabel();if(navigator.onLine&&Date.now()-lastClockCheck>15*60*1000)checkClock();}
 setInterval(refreshClock,30000);
 window.addEventListener('pageshow',refreshClock);
-window.addEventListener('focus',refreshClock);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshClock();});
+window.addEventListener('focus',()=>{refreshClock();scheduleSync();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshClock();scheduleSync();}});
 function updateConnection(){if($('#connection'))$('#connection').innerHTML=connectionText();if($('#offline-setting'))$('#offline-setting').textContent=offlineDescription();if($('#offline-tip'))$('#offline-tip').textContent=offlineDescription();}
 async function checkOffline(){
   if(offlineBusy)return;
@@ -253,6 +278,69 @@ function updateDuplicateWarning(form){
     if(duplicates.length)slot.innerHTML=`<div class="alert duplicate-alert"><b>پرداخت مشابه پیدا شد.</b><p>در همین بیمه‌نامه، پرداخت ${cash(amount(values.amount))} در ${dateLabel(parseDate(values.date))} ثبت شده است.</p><label class="confirm-check"><input type="checkbox" id="duplicate-confirm">این دریافت جداگانه است؛ آن را هم ثبت کن.</label></div>`;else slot.innerHTML='';
   }catch{slot.innerHTML='';}
 }
+function cloudMessage(){
+  if(!navigator.onLine)return 'روی دستگاه ذخیره شد؛ در انتظار اینترنت';
+  if(sync.status==='syncing')return 'روی دستگاه ذخیره شد؛ در حال بررسی آنلاین…';
+  if(Object.keys(data.cloud?.conflicts||{}).length)return 'دو نسخه متفاوت پیدا شد؛ بررسی لازم است';
+  if(sync.status==='error')return sync.message;
+  if(Object.keys(data.cloud?.pending||{}).length)return 'روی دستگاه ذخیره شد؛ در صف ارسال آنلاین';
+  if(data.cloud?.confirmedAt)return 'آنلاین بررسی شد: '+fa(new Date(data.cloud.confirmedAt).toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'}));
+  return 'روی دستگاه ذخیره شد؛ هنوز آنلاین تأیید نشده';
+}
+function cloudStrip(){return mode==='own'&&data.cloud?`<div class="save-strip" role="status"><span>${esc(cloudMessage())}</span><button data-action="cloud-settings">بررسی همگام‌سازی</button></div>`:'';}
+function cloudPanel(){
+  if(mode==='demo')return '';
+  const conflicts=Object.entries(data.cloud?.conflicts||{});
+  return `<section class="panel settings-card"><h2>اتصال آنلاین دفتر</h2><p>${data.cloud?esc(cloudMessage()):'راه‌اندازی فقط یک بار روی هر دستگاه انجام می‌شود. دفتر نمونه هرگز ارسال نمی‌شود.'}</p>${data.cloud?button('همگام‌سازی اکنون','cloud-sync','secondary','clock'):button(sync.remote.session()?'بررسی اتصال دفتر':'ورود اولیه دستگاه','cloud-connect','secondary','shield')}${sync.status==='error'?button('تمدید ورود دستگاه','cloud-login','secondary','shield'):''}<p>بررسی آنلاین هنگام بازگشت به صفحه، اتصال دوباره اینترنت، ذخیره تغییر و زدن دکمه همگام‌سازی انجام می‌شود. فایل پشتیبان را همچنان نگه دارید.</p>${conflicts.map(([id,c])=>`<div class="alert"><p>اختلاف در پرونده ${esc(c.local?.name||c.remote?.name||'مشتری')}؛ هیچ‌کدام از دو نسخه حذف نشده است.</p>${button('مقایسه دو نسخه','cloud-conflict','secondary','file',`data-id="${esc(id)}"`)}</div>`).join('')}</section>`;
+}
+function cloudLogin(){openDialog(`${modalTitle('ورود اولیه دستگاه','ایمیل و رمز حساب اختصاصی دفتر را وارد کنید. پس از ورود، دستگاه دسترسی را نگه می‌دارد؛ رمز ذخیره نمی‌شود.')}<form id="cloud-login-form"><label>ایمیل<input name="email" type="email" autocomplete="username" dir="ltr" required></label><label>رمز عبور<input name="password" type="password" autocomplete="current-password" dir="ltr" required></label><p>ورود به معنی تأیید نگه داشتن دسترسی همین دستگاه است. از دستگاه شخصی استفاده کنید.</p><div class="form-error" id="form-error" role="alert"></div><div class="form-actions"><button type="submit" class="btn primary">ورود و نگه داشتن دسترسی دستگاه</button></div></form>`);}
+async function cloudPreview(){
+  if(!sync.remote.session()){cloudLogin();return;}
+  const preview=await sync.preview();
+  openDialog(`${modalTitle('پیش از اتصال دفتر','دو نسخه بررسی و ترکیب می‌شوند؛ نسخه آنلاین روی دفتر غیرخالی نوشته نمی‌شود.')}<p>این دستگاه: ${money(preview.local.customers.length)} مشتری · ${CURRENCIES[preview.local.currency]}</p><p>آنلاین: ${money(preview.documents.length)} مشتری · ${preview.meta?CURRENCIES[preview.meta.currency]:'دفتر هنوز ایجاد نشده'}</p><p>ابتدا پشتیبان این دستگاه را دریافت کنید. مشتریان با شناسه متفاوت هر دو نگه داشته می‌شوند؛ نام یکسان با شناسه متفاوت ممکن است دو پرونده جدا باشد. اختلاف در یک پرونده نیاز به بررسی شما دارد.</p>${button('دریافت پشتیبان پیش از اتصال','cloud-backup','secondary','backup')}<label class="confirm-check"><input type="checkbox" id="cloud-join-confirm">پشتیبان را نگه داشتم؛ اتصال و ارسال این دفتر به پروژه Firebase خودم را تأیید می‌کنم.</label><div class="form-error" id="form-error" role="alert"></div><div class="form-actions">${button('اتصال و همگام‌سازی','cloud-join','primary','check')}</div>`);
+  cloudJoinPreview=preview;
+}
+let cloudJoinPreview=null;
+function conflictCustomer(c){
+  if(!c)return '<p>این پرونده در این نسخه وجود ندارد.</p>';
+  const summary=customerSummary(c);
+  return `<h3>${esc(c.name)}</h3><p>${esc(fa(c.phone))} ${esc(c.notes)}</p><p>پرداخت‌شده: ${cash(summary.paid)} · مانده: ${cash(summary.owed)}</p>${c.policies.map(p=>`<div class="alert"><h4>${esc(p.title)} · ${esc(fa(p.number))}</h4><p>مبلغ قرارداد: ${cash(p.total)}</p><h4>پرداخت‌ها</h4>${p.payments.length?p.payments.map(r=>`<p>${cash(r.amount)} · ${dateLabel(r.date)} · ${r.voidedAt?'لغوشده':'فعال'} ${esc(r.note)}</p>`).join(''):'<p>پرداختی ثبت نشده است.</p>'}<h4>برنامه اقساط</h4>${p.installments.map(i=>`<p>${dateLabel(i.dueDate)} · ${cash(i.amount)}</p>`).join('')}</div>`).join('')}`;
+}
+function showCloudConflict(id){const c=data.cloud?.conflicts[id];if(!c)return;
+  openDialog(`${modalTitle('مقایسه دو نسخه','انتخاب شما کل همین پرونده را تعیین می‌کند. سایر مشتریان تغییر نمی‌کنند. هر دو نسخه در سابقه تصمیم نگه داشته می‌شوند.')}<p>پیش از انتخاب، مبالغ و پرداخت‌های هر دو نسخه را بررسی کنید. پرداخت موجود فقط در نسخه انتخاب‌نشده به حساب فعال اضافه نمی‌شود.</p><div class="backup-grid">${['local','remote'].map(side=>`<section><h3>${side==='local'?'این دستگاه':'نسخه آنلاین'}</h3>${conflictCustomer(c[side])}${c[side]?button('انتخاب همین نسخه','cloud-resolve','secondary','check',`data-id="${esc(id)}" data-choice="${side}"`):''}</section>`).join('')}</div>${button('دریافت هر دو نسخه','cloud-conflict-backup','secondary','backup',`data-id="${esc(id)}"`)}<label class="confirm-check"><input type="checkbox" id="cloud-resolution-confirm">هر دو نسخه را بررسی کردم و انتخاب کل پرونده را تأیید می‌کنم.</label><div class="form-error" id="form-error" role="alert"></div>`);
+}
+document.addEventListener('click',async event=>{
+  const b=event.target.closest('[data-action]');if(!b)return;const action=b.dataset.action;
+  if(!action.startsWith('cloud-'))return;
+  event.preventDefault();b.disabled=true;
+  try{
+    if(action==='cloud-settings'){closeDialog();go('backup');}
+    if(action==='cloud-sync')await sync.run();
+    if(action==='cloud-login')cloudLogin();
+    if(action==='cloud-connect')await cloudPreview();
+    if(action==='cloud-backup')download(JSON.stringify(backupLedger(data),null,2),`daftar-before-sync-${today()}.json`);
+    if(action==='cloud-join'){
+      if(!$('#cloud-join-confirm')?.checked)throw Error('تأیید اتصال و دریافت پشتیبان لازم است.');
+      if(!cloudJoinPreview)throw Error('پیش‌نمایش را دوباره باز کنید.');
+      await sync.connect(cloudJoinPreview);closeDialog();render();
+    }
+    if(action==='cloud-conflict')showCloudConflict(b.dataset.id);
+    if(action==='cloud-conflict-backup')download(JSON.stringify(data.cloud.conflicts[b.dataset.id],null,2),`daftar-conflict-${today()}.json`);
+    if(action==='cloud-resolve'){
+      if(!$('#cloud-resolution-confirm')?.checked)throw Error('بررسی و انتخاب کل پرونده را تأیید کنید.');
+      await sync.resolve(b.dataset.id,b.dataset.choice);closeDialog();render();
+    }
+  }catch(e){formError(e);}finally{b.disabled=false;}
+});
+document.addEventListener('submit',async event=>{
+  const form=event.target;if(form.id!=='cloud-login-form')return;
+  event.preventDefault();const submitButton=form.querySelector('button');submitButton.disabled=true;
+  const email=form.elements.email.value, password=form.elements.password.value;
+  try{await sync.signIn(email,password);form.elements.password.value='';closeDialog();if(readOwn()?.cloud)await sync.run();else await cloudPreview();}
+  catch{formError(Error('ورود انجام نشد؛ ایمیل و رمز حساب دفتر، اتصال اینترنت و تنظیمات Firebase را بررسی کنید.'));}
+  finally{submitButton.disabled=false;}
+});
+
 function saveStrip(){
   if(!storageOK||corrupt||mode==='demo')return '';
   let backed=false;try{backed=localStorage.getItem('daftar.backup-revision.'+mode)===(data.revision||'legacy');}catch{}
@@ -261,4 +349,5 @@ function saveStrip(){
 $('#dialog').addEventListener('cancel',()=>saveDraft($('#dialog form')));
 $('#dialog').addEventListener('close',()=>{if(!corrupt)render();});
 window.addEventListener('pagehide',()=>{if($('#dialog').open)saveDraft($('#dialog form'));});
-render();checkClock();checkOffline();
+render();checkClock();checkOffline();scheduleSync();
+

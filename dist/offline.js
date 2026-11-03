@@ -1,4 +1,4 @@
-export const OFFLINE_CACHE='daftar-shell-v7';
+export const OFFLINE_CACHE='daftar-shell-v8';
 
 function bounded(promise,ms,message){
   let timer;
@@ -36,3 +36,4 @@ export async function prepareOffline({serviceWorker,secure=true,Channel=globalTh
   try{return await bounded(run(),timeout,'آماده‌سازی آفلاین کامل نشد. لینک را مستقیم در مرورگر باز کنید؛ سپس «تلاش دوباره» را بزنید.');}
   finally{serviceWorker.removeEventListener?.('message',errorMessage);}
 }
+
