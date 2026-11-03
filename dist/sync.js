@@ -97,7 +97,7 @@ export class LedgerSync {
             return reconcile(old,[...all,acknowledged]);
           });
         } catch(e) {
-          if([409,412].includes(e.status)){retry=true;break;}
+          if([409,412].includes(e.status)||e.code==='FAILED_PRECONDITION'||e.code==='ABORTED'){retry=true;break;}
           throw e;
         }
       }
