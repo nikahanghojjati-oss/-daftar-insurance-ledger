@@ -90,3 +90,8 @@ The full REST transport emulator run 41568951641 passed four test groups, includ
 Owner-approved UID-scoped rules were published in Firebase Console and the console displayed the published 10:14 PM ET revision. The source selected for future publication is now byte-identical to the emulator-tested candidate. A regression test rejects placeholders and modified/unreviewed rule sources. The 54 Node checks pass, with the offline shell inventory updated for the local visual stylesheet; source syntax checks pass. Desktop and phone presentation will be verified after deployment. Live account sign-in, production two-device sync, and migration of real records remain NOT CHECKED.
 
 Live Chrome visual QA after PR #5: dashboard, customer profile and payment form at 1920px; 390×844 responsive navigation, dashboard and profile. Document/body widths match each viewport (1920 and 390), with no page overflow. No browser errors were captured. The phone balance label clipping found during QA is corrected in the final CSS. No customer or payment mutation was submitted during these checks. Account sign-in and live two-device sync still remain pending.
+
+
+## Galaxy A20 UI target
+
+The owner supplied Galaxy A20 SM-A205F/DS and 720×1560 physical panel pixels. CSS viewport is not established by those physical specs. Browser QA targets 360×780, 360×660 with browser space reserved, and a reduced 360×480 form viewport. This is responsive-layout verification, not a test on the father's actual handset or its keyboard. All 54 Node checks remain applicable; no new tests mirror the CSS. Desktop and larger-phone styles remain outside the new ≤400px overrides.

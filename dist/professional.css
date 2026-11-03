@@ -211,3 +211,152 @@ dialog::backdrop{background:#152f4266;backdrop-filter:blur(5px)}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 /* Keep currency and every digit visible in the narrow secondary balance cards. */
 @media(max-width:600px){.stat-value{white-space:normal;overflow-wrap:anywhere}.stat:not(.owed) .stat-value{font-size:clamp(18px,5.7vw,23px)}.stat:not(.owed) .stat-value small{display:block;margin:5px 0 0;font-size:10px;line-height:1.5}}
+/* Galaxy A20: conservative 360 CSS-pixel portrait target.
+   Physical panel pixels are not used as the webpage viewport. */
+@media(max-width:400px){
+  body{font-size:16px;line-height:1.85}
+  .topbar{min-height:64px;height:auto;padding:10px 14px;gap:9px}
+  .crumb{font-size:12px;gap:7px}
+  .topbar-right{gap:4px}
+  .connection{font-size:10px;line-height:1.7;padding:2px 6px}
+  .today{font-size:11px}
+  .today small{font-size:9px}
+  main{padding:16px 12px 104px;min-height:calc(100dvh - 64px)}
+  .demo-banner{padding:9px 10px;margin-bottom:17px;font-size:12px;line-height:1.7;gap:8px}
+  .demo-banner>span{min-width:0}
+  .demo-banner .btn{font-size:11px;min-height:44px;padding:8px 10px}
+  .demo-banner .btn .icon{display:none}
+  .page-heading{min-height:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;margin-bottom:18px}
+  .page-heading h1{font-size:25px;letter-spacing:-.5px}
+  .eyebrow{font-size:11px;line-height:1.8;margin-bottom:2px}
+  .page-heading p{font-size:12px;line-height:1.85;max-width:none;margin-top:3px}
+  .page-heading>.btn{min-height:48px;margin-top:0;font-size:12px;padding:10px 12px;white-space:nowrap}
+  .page-heading>.btn .icon{width:16px;height:16px}
+  .stats{gap:10px;margin-bottom:18px}
+  .stat{padding:14px 12px;min-height:0;border-radius:12px}
+  .stat.owed{min-height:0;padding:17px 18px}
+  .stat-label{font-size:12px;gap:6px;line-height:1.8}
+  .stat-label .icon{height:16px;width:16px}
+  .stat-value{margin:9px 0 7px;line-height:1.3}
+  .stat:not(.owed) .stat-value{font-size:21px;margin-bottom:6px}
+  .stat:not(.owed) .stat-value small{font-size:11px;margin-top:3px;line-height:1.4}
+  .owed .stat-value{font-size:31px;margin:10px 0 9px}
+  .owed .stat-value small{font-size:12px}
+  .stat-foot,.stat:not(.owed) .stat-foot{font-size:11px;line-height:1.8;color:#5e7580}
+  .owed .stat-foot{color:#d8eadd}
+  .home-grid{gap:18px}
+  .panel-head{padding:18px 15px 14px;gap:10px}
+  .panel-head h2{font-size:17px}
+  .panel-head p{font-size:12px;color:#617985;line-height:1.8}
+  .panel-head .text-btn{font-size:12px;min-height:44px}
+  .search{margin:0 14px 16px;min-height:50px;padding:9px 10px}
+  .search input{font-size:14px;height:30px}
+  .search input::placeholder{font-size:12px;color:#687f8a}
+  .customer-table,.customer-table tbody{display:block;width:100%;white-space:normal}
+  .customer-table thead{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  .customer-table tbody tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(76px,auto);column-gap:10px;row-gap:4px;padding:15px 14px;border-top:1px solid #e5ecef;align-items:center}
+  .customer-table tbody tr:last-child{border-bottom:0}
+  .customer-table td{display:block;padding:0;border:0;min-width:0}
+  .customer-table td:first-child{grid-column:1;grid-row:1}
+  .customer-table td:nth-child(2){grid-column:2;grid-row:1/3;text-align:left;align-self:center;max-width:128px;white-space:normal;overflow-wrap:anywhere;font-size:15px;line-height:1.6}
+  .customer-table td:nth-child(4){grid-column:1;grid-row:2;padding-right:44px}
+  .customer-table .optional-col,.customer-table .arrow-cell{display:none}
+  .customer-name{min-height:48px;gap:9px;width:100%}
+  .customer-name .avatar{height:35px;width:35px;font-size:15px}
+  .customer-name b{font-size:14px;font-weight:650;white-space:normal;overflow-wrap:anywhere;line-height:1.85}
+  .customer-name small{font-size:11px;color:#647d89;letter-spacing:0;margin-top:1px}
+  .amount-cell small{font-size:11px;line-height:1.7;color:#647d89}
+  .badge{font-size:11px;padding:3px 7px;line-height:1.8}
+  .due-panel .panel-head{padding:18px 16px 15px}
+  .due-panel .due-card,.due-list .due-card{padding:16px;gap:11px;min-height:92px}
+  .due-info{min-width:0}
+  .due-info b{font-size:14px}
+  .due-info small{font-size:12px;color:#657e8a}
+  .due-info strong{font-size:15px;white-space:normal;overflow-wrap:anywhere}
+  .due-info strong small{font-size:11px}
+  .due-card>.badge{font-size:10px}
+  .due-bottom{min-height:50px;font-size:13px}
+  .filters{gap:7px;padding:0 14px 17px}
+  .chip{font-size:12px;min-height:44px;padding:8px 10px}
+  .due-filters{padding:0 0 17px}
+  .tip-strip{font-size:12px;padding:16px 14px;line-height:1.9}
+  .tip-strip button{font-size:12px;min-height:44px}
+  .mobile-nav{padding:6px 5px max(8px,env(safe-area-inset-bottom));gap:3px}
+  .mobile-nav button{min-height:56px;font-size:12px;gap:3px}
+  .mobile-nav .icon{height:22px;width:22px}
+  .footer{font-size:11px;color:#637d89}
+  .back-link{font-size:13px;min-height:44px;display:inline-flex;align-items:center;gap:6px;margin-bottom:12px}
+  .profile-heading{gap:11px;margin-bottom:18px}
+  .profile-heading h1{font-size:24px}
+  .profile-meta{font-size:12px;flex-wrap:wrap}
+  .edit-customer{min-height:46px;font-size:12px}
+  .customer-note{font-size:13px;line-height:2}
+  .section-heading{gap:10px;flex-wrap:wrap}
+  .section-heading h2{font-size:17px}
+  .section-heading .btn{min-height:48px;font-size:12px}
+  .policy-head{padding:18px 16px}
+  .policy-title{min-width:0}
+  .policy-title h2{font-size:17px}
+  .policy-title p{font-size:12px;overflow-wrap:anywhere}
+  .policy-head>.btn{font-size:13px;min-height:48px}
+  .policy-totals{padding:0 16px 19px;gap:18px 12px}
+  .policy-totals>div{min-width:0}
+  .policy-totals span{font-size:12px;color:#657f8c}
+  .policy-totals b{font-size:16px;white-space:normal;overflow-wrap:anywhere}
+  .policy-totals small{font-size:11px}
+  .installment-card{padding:17px}
+  .installment-title{font-size:14px}
+  .installment-card dt{font-size:12px;color:#657f8c}
+  .installment-card dd{font-size:16px}
+  summary{font-size:14px;padding:17px 16px}
+  summary span{font-size:11px}
+  .payment-history{padding:0 16px}
+  .payment-history li{flex-wrap:wrap}
+  .payment-history span:not(.history-check){font-size:12px;color:#657f8c}
+  .payment-history li>.text-btn{min-height:44px;font-size:12px}
+  .backup-card{padding:22px;gap:14px}
+  .backup-card h2,.settings-card h2{font-size:19px}
+  .backup-card p,.settings-card p{font-size:14px;line-height:1.95}
+  .backup-card .btn,.settings-actions .btn{min-height:48px;font-size:13px}
+  .backup-meta,.backup-card>small,.backup-reminder{font-size:12px;line-height:1.9;color:#637d89}
+  .settings-card{padding:21px}
+  .settings-card dt{font-size:13px}
+  .settings-card dd{font-size:14px}
+  .save-strip{font-size:12px;line-height:1.9}
+  .save-strip button{font-size:12px;min-height:44px}
+  .draft-banner{font-size:12px;align-items:flex-start}
+  .draft-banner .btn{min-height:46px;font-size:12px}
+  dialog{width:calc(100% - 16px);max-height:calc(100dvh - 20px);padding:24px 18px 18px;border-radius:14px;overscroll-behavior:contain;scroll-padding-block:18px}
+  .modal-head{padding-left:32px;margin-bottom:20px}
+  .modal-head h2{font-size:23px}
+  .modal-head p{font-size:14px;line-height:1.9}
+  .dialog-close{height:44px;width:44px;min-height:44px;min-width:44px;left:9px;top:9px}
+  .form-grid{grid-template-columns:1fr;gap:0}
+  .field{font-size:14px;margin-bottom:17px}
+  .field input,.field select,.field textarea,#cloud-login-form input{font-size:16px;min-height:52px;padding:12px;scroll-margin-block:80px}
+  .field small,.field .optional{font-size:12px;color:#637d89}
+  .form-note{font-size:13px;line-height:1.9}
+  .form-divider{font-size:14px;margin:20px 0 15px}
+  .schedule-preview{font-size:13px;line-height:1.9}
+  .schedule-preview small{font-size:12px}
+  .form-actions{gap:9px;flex-wrap:wrap;padding-top:17px;margin-top:18px}
+  .form-actions>.btn,.form-actions>button[type=submit]{min-height:50px;font-size:14px;flex:1 1 auto;padding:12px 14px}
+  .form-actions>.text-btn{width:100%;min-height:44px;font-size:12px;justify-content:flex-start;margin:0}
+  .confirm-check{font-size:13px;line-height:1.9;gap:9px}
+  .confirm-check input{width:22px;height:22px;min-width:22px}
+  .currency-choices{grid-template-columns:1fr;gap:11px}
+  .currency-choices label{padding:17px;gap:12px;min-height:78px}
+  .currency-choices b{font-size:20px}
+  .currency-choices small{font-size:13px;margin-top:4px;line-height:1.8}
+  .payment-balance{font-size:13px;padding:14px;gap:12px}
+  .payment-balance strong{font-size:20px;overflow-wrap:anywhere}
+  .form-error{font-size:13px}
+  .help-notes,.help-steps p{font-size:14px;line-height:1.95}
+  #toast{font-size:13px;line-height:1.9;bottom:90px;max-width:calc(100% - 24px);padding:12px 16px}
+}
+@media(max-width:400px) and (max-height:540px){
+  dialog{max-height:calc(100dvh - 12px);padding-top:21px;padding-bottom:14px}
+  .modal-head{margin-bottom:17px}
+  .modal-head h2{font-size:21px}
+  .form-actions{margin-top:15px}
+}
