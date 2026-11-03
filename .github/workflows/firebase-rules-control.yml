@@ -1,0 +1,44 @@
+name: Verify or publish Daftar Firestore Rules
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Verify access first; publish requires reviewed rules and an explicit readiness gate
+        required: true
+        type: choice
+        options:
+          - verify
+          - publish
+        default: verify
+permissions:
+  contents: read
+concurrency:
+  group: daftar-firestore-rules
+  cancel-in-progress: false
+jobs:
+  rules:
+    if: github.repository == 'nikahanghojjati-oss/-daftar-insurance-ledger' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FIREBASE_PROJECT_ID: daftar-insurance-ledger
+      FIREBASE_RULES_OPERATION: ${{ inputs.operation }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Validate the fixed project and operation
+        run: |
+          test "$GITHUB_REPOSITORY" = 'nikahanghojjati-oss/-daftar-insurance-ledger'
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test "$FIREBASE_PROJECT_ID" = 'daftar-insurance-ledger'
+          case "$FIREBASE_RULES_OPERATION" in verify|publish) ;; *) exit 1 ;; esac
+          node --check scripts/firebase-rules-control.mjs
+      - name: Authenticate rules-only service account
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.FIREBASE_RULES_SERVICE_ACCOUNT_JSON }}
+          create_credentials_file: true
+          export_environment_variables: true
+      - name: Verify access or publish reviewed rules and read them back
+        run: node scripts/firebase-rules-control.mjs

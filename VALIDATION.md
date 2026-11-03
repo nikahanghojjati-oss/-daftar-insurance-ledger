@@ -67,3 +67,8 @@ Hosted verification (v5): unauthenticated Cloud Browser opened the public URL. T
 32 Node tests pass and syntax checks pass for app/core/clock/service-worker. New checks cover Tehran midnight/new year, HTTP Date correction for a two-day device-clock skew, missing server timestamp rejection, cache bypass for the clock request, Esfand 5 → Farvardin 20, six-payment limit, exact sums and custom dates/amounts, cash settlement, and revision audit without changing existing receipt IDs or balances.
 
 The online server clock was observed on the published GitHub Pages host using a fresh `HEAD /-daftar-insurance-ledger/index.html?__daftar_clock=<nonce>` request: HTTP 200, Date header present, Age 0. The feature branch is not yet deployed to Pages; live browser UI and real-device midnight/offline behavior remain unverified. Firebase console and cross-device sync are still not configured or tested; no real customer data has been sent to Firebase.
+
+
+## Firebase rules control-plane preparation — 2026-11-02 ET
+
+35 Node tests pass, including three checks for the manual-only workflow, fixed repo/main/project, missing credential refusal and blocked publication of the deny-all placeholder. The workflow YAML parses and the publisher script passes `node --check`. No GitHub Secret is present or verified yet, and no Firebase Rules or customer data was mutated. A first successful manual `verify` workflow, then UID-scoped rules/emulator tests and two-device sync acceptance are still required.

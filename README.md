@@ -48,3 +48,7 @@ Offline setup now detects a failed worker installation, bounds stalled readiness
 Pay in full on the policy start date, or record a real down payment and one to six interest-free installments. The first due date defaults to one Jalali month plus 15 days after the start (Esfand 5 → Farvardin 20); the rest default to anchored Jalali months. The down-payment percent, amount, first due date, installment dates and installment amounts are editable. A saved schedule can be revised without changing the original contract total or receipts; old schedule values are retained in the audit history.
 
 The displayed current date uses Tehran time from the current clock and refreshes after midnight, on focus and on page return. Online, a fresh same-origin server Date header is checked; offline, the device clock is required and the UI says so. No offline app can guarantee an authoritative date if that clock is wrong.
+
+## Firebase rules access (owner setup pending)
+
+The owner can connect a dedicated rules-only service account through the encrypted GitHub Actions secret `FIREBASE_RULES_SERVICE_ACCOUNT_JSON`. Follow the [Chromebook owner setup guide](docs/FIREBASE_OWNER_SETUP.fa.md). A manual workflow verifies read-only Rules API access; publishing is blocked by a deny-all placeholder until reviewed UID-scoped rules and the sync client are ready. This key never enters GitHub Pages or the chat. No Firebase verification or customer sync has occurred yet.
