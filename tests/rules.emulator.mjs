@@ -38,9 +38,11 @@ try {
    // from the UID-scoped authorization tests above. It cannot reach production.
    const host=process.env.FIRESTORE_EMULATOR_HOST;
    assert.match(host,/^(127\.0\.0\.1|localhost):8080$/);
-   const fetcher=(url,options)=>{
+   const fetcher=async(url,options)=>{
      assert.ok(url.startsWith('https://firestore.googleapis.com/v1/projects/demo-daftar/'));
-     return fetch(url.replace('https://firestore.googleapis.com','http://'+host),options);
+     const response=await fetch(url.replace('https://firestore.googleapis.com','http://'+host),options);
+     if(!response.ok && options.method==='PATCH')console.log('Emulator REST rejected patch',response.status,await response.clone().text());
+     return response;
    };
    const device=initial=>{
      let local=structuredClone(initial),chain=Promise.resolve();
@@ -55,7 +57,7 @@ try {
    await b.engine.connect(await b.engine.preview());assert.deepEqual(a.data.customers,b.data.customers);
    const pay=(d,id)=>d.edit(l=>{l.customers[0].policies[0]=recordPayment(l.customers[0].policies[0],{id,amount:'100000',date:'1405/01/02',note:''});});
    pay(a,'A');pay(b,'B');await a.engine.run({full:false});await b.engine.run({full:false});await a.engine.run();
-   assert.equal(a.engine.status,'confirmed');assert.equal(b.engine.status,'confirmed');assert.deepEqual(a.data.customers,b.data.customers);assert.equal(policySummary(a.data.customers[0].policies[0]).paid,200000);
+   console.log('REST phases',a.engine.status,b.engine.status,'writes',a.remote.writes,b.remote.writes);assert.equal(a.engine.status,'confirmed');assert.equal(b.engine.status,'confirmed');assert.deepEqual(a.data.customers,b.data.customers);assert.equal(policySummary(a.data.customers[0].policies[0]).paid,200000);
    const old=await a.remote.get('fictional','toman');pay(a,'C');await a.engine.run({full:false});
    await assert.rejects(a.remote.put(old.value,old.updateTime,'stale'),e=>e.code==='FAILED_PRECONDITION'||[409,412].includes(e.status));
    const writes=a.remote.writes;await a.engine.run();assert.equal(a.remote.writes,writes);assert.equal(policySummary(a.data.customers[0].policies[0]).paid,300000);
