@@ -100,8 +100,8 @@ test('REST authentication persists refresh access, never password; wrong account
 });
 test('REST refreshes an expired session, honors page tokens, and sends server preconditions',async()=>{
  const map=new Map([['daftar.firebase.session.v1',JSON.stringify({owner:LEDGER_UID,refreshToken:'refresh',expiresAt:0})]]),storage={getItem:k=>map.get(k),setItem:(k,v)=>map.set(k,v)};
- const c=customer(),calls=[];const remote=new FirebaseRest({storage,fetcher:async(url,options)=>{calls.push({url,options});if(url.includes('securetoken'))return Response.json({user_id:LEDGER_UID,id_token:'new-token',refresh_token:'new-refresh',expires_in:'3600'});if(options.method==='PATCH')return Response.json({});return Response.json({documents:[{name:'projects/p/databases/(default)/documents/ledgers/u/customers/'+c.id,fields:{payload:{stringValue:JSON.stringify(c)}},updateTime:'time'}],...(!url.includes('pageToken')?{nextPageToken:'second'}:{})});}});
- assert.equal(await remote.token(),'new-token');const docs=await remote.list('toman');assert.equal(docs.length,2);assert.ok(calls.some(c=>c.url.includes('pageToken=second')));await remote.put(c,'time','op');assert.ok(calls.at(-1).url.includes('currentDocument.updateTime=time'));assert.equal(calls.at(-1).options.headers.Authorization,'Bearer new-token');
+ const c=customer(),calls=[];const remote=new FirebaseRest({storage,fetcher:async(url,options)=>{calls.push({url,options});if(url.includes('securetoken'))return Response.json({user_id:LEDGER_UID,id_token:'new-token',refresh_token:'new-refresh',expires_in:'3600'});if(options.method==='POST' && url.endsWith(':commit'))return Response.json({});return Response.json({documents:[{name:'projects/p/databases/(default)/documents/ledgers/u/customers/'+c.id,fields:{payload:{stringValue:JSON.stringify(c)}},updateTime:'time'}],...(!url.includes('pageToken')?{nextPageToken:'second'}:{})});}});
+ assert.equal(await remote.token(),'new-token');const docs=await remote.list('toman');assert.equal(docs.length,2);assert.ok(calls.some(c=>c.url.includes('pageToken=second')));await remote.put(c,'time','op');assert.ok(calls.at(-1).url.endsWith('/documents:commit'));assert.equal(JSON.parse(calls.at(-1).options.body).writes[0].currentDocument.updateTime,'time');assert.equal(calls.at(-1).options.headers.Authorization,'Bearer new-token');
 });
 
 test('incremental save reads only pending customers and preserves untouched baseline documents',async()=>{
@@ -109,4 +109,9 @@ test('incremental save reads only pending customers and preserves untouched base
  let lists=0;const list=remote.list.bind(remote);remote.list=async()=>{lists++;return list();};
  a.mutate(l=>l.customers[0]=receipt(l.customers[0],'A'));await a.engine.run({full:false});assert.equal(lists,0);assert.equal(a.data.customers.length,2);assert.equal(a.engine.status,'confirmed');
  a.mutate(l=>l.customers.push(customer('c3')));await a.engine.run({full:false});assert.equal(remote.docs.size,3);assert.equal(a.engine.status,'confirmed');
+});
+test('Firestore HTTP 400 FAILED_PRECONDITION rereads rather than abandoning pending money',async()=>{
+ const initial=ledger(),remote=new Remote(initial),a=device(remote,initial);await connect(a);a.mutate(l=>l.customers[0]=receipt(l.customers[0],'A'));
+ const put=remote.put.bind(remote);let once=true;remote.put=async(c,v)=>{if(once){once=false;remote.seed(receipt(remote.docs.get('c1').value,'B'));throw new CloudError(400,'FAILED_PRECONDITION');}return put(c,v);};
+ await a.engine.run();assert.equal(a.engine.status,'confirmed');assert.equal(a.data.customers[0].policies[0].payments.length,2);
 });

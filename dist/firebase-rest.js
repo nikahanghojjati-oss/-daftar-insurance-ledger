@@ -41,7 +41,8 @@ export class FirebaseRest {
   }
   async firestore(path,method='GET',body) {
     const token=await this.token();
-    const send=access=>this.request(this.root+path,{method,headers:{Authorization:`Bearer ${access}`,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
+    const url=path===':commit'?this.root.split('/documents/')[0]+'/documents:commit':this.root+path;
+    const send=access=>this.request(url,{method,headers:{Authorization:`Bearer ${access}`,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
     try{return await send(token);}
     catch(e){
       if(e.status!==401)throw e;
@@ -83,11 +84,13 @@ export class FirebaseRest {
   }
   async put(customer,updateTime,operation) {
     if(!customer.id||customer.id.includes('/')||customer.id==='.'||customer.id==='..')throw new CloudError(422,'INVALID_ID');
-    const query=new URLSearchParams(updateTime?{'currentDocument.updateTime':updateTime}:{'currentDocument.exists':'false'});
     const payload=JSON.stringify(customer);
     if(new TextEncoder().encode(payload).length>700000)throw new CloudError(422,'CUSTOMER_TOO_LARGE');
     this.writes++;
-    return this.firestore('/customers/'+encodeURIComponent(customer.id)+'?'+query,'PATCH',{fields:{payload:{stringValue:payload},operation:{stringValue:operation}}});
+    // A one-write commit carries the timestamp precondition in the JSON body.
+    // This also avoids emulator PATCH query timestamp parsing differences.
+    const name=`projects/${this.config.projectId}/databases/(default)/documents/ledgers/${this.owner}/customers/${customer.id}`;
+    return this.firestore(':commit','POST',{writes:[{update:{name,fields:{payload:{stringValue:payload},operation:{stringValue:operation}}},currentDocument:updateTime?{updateTime}:{exists:false}}]});
   }
   async get(id,currency) {this.reads++;return this.decode(await this.firestore('/customers/'+encodeURIComponent(id)),currency);}
 }
