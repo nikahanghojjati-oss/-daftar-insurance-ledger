@@ -77,3 +77,10 @@ The owner explicitly approved publishing the staged UID-scoped rules. They were 
 The visual update adds a slate navigation rail, warm-white workspace, teal balance emphasis, stronger typography, clearer table/status hierarchy, refined payment and backup forms, and responsive mobile navigation. All fonts and assets remain local. The application stays on the same GitHub Pages URL and retains its ledger storage keys, schema, amounts, date calculations and sync protocol. `dist/professional.css` is the final visual layer. Shell cache v9 includes that stylesheet.
 
 Published interface checked through Chrome at the normal 1920px desktop viewport and a temporary 390×844 phone viewport. Dashboard, customer profile, and payment dialog render; no browser errors were captured. The page has no horizontal overflow at either width. A phone secondary-card currency label was clipped and is corrected by moving its unit to a separate line and allowing long amounts to wrap. Shell cache v10 carries the correction. No receipt was saved during visual QA.
+
+
+## Father's phone target — supplied by owner
+
+Samsung Galaxy A20, SM-A205F/DS; physical panel 720×1560 pixels, portrait, 6.4 inches. These are physical pixels, not an observed CSS viewport. The targeted UI uses a conservative 360 CSS-pixel width and must work at both 360×780 and reduced-height 360×660, plus a 360×480 form viewport. Actual Android display/font scaling and browser controls remain device-dependent; do not claim physical-device verification.
+
+The focused UI patch preserves desktop styles and all business/storage/sync behavior. At widths ≤400px it compacts summary spacing, enlarges relevant text and tap targets, presents customer rows as readable name/balance/status cards, and gives insurance/payment forms one column and a scrollable dialog in short viewports. Shell cache v11 includes it. No real records or credentials were used for UI verification.
