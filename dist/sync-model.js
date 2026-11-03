@@ -7,7 +7,7 @@ export const equal = (a,b) => canonical(a) === canonical(b);
 const clone = value => value === undefined ? undefined : structuredClone(value);
 const object = value => value && typeof value === 'object' && !Array.isArray(value);
 const entityArrays = new Set(['policies','payments']);
-const auditArrays = new Set(['revisions','scheduleHistory']);
+const auditArrays = new Set(['revisions','scheduleHistory','syncResolutions']);
 
 function merge(base,local,remote,path,conflicts) {
   if(equal(local,remote))return clone(local);
@@ -53,7 +53,7 @@ export function mergeCustomer(base,local,remote,currency) {
 }
 
 export function initializeCloud(ledger,owner) {
-  return {...ledger,cloud:{version:1,owner,base:{},pending:{},conflicts:{},resolutions:[],confirmedAt:null}};
+  return {...ledger,cloud:{version:1,owner,base:{},pending:{},conflicts:clone(ledger.unresolvedSyncConflicts||{}),resolutions:clone(ledger.syncResolutionHistory||[]),confirmedAt:null}};
 }
 
 // This object and the business ledger are serialized in ONE localStorage write.
@@ -98,8 +98,14 @@ export function resolveConflict(ledger,id,choice) {
   if(!conflict)throw Error('این اختلاف قبلاً بررسی شده است.');
   const chosen=conflict[choice];
   if(!chosen)throw Error('این نسخه موجود نیست؛ برای جلوگیری از حذف حساب، نسخه دیگر را انتخاب کنید.');
-  next.cloud.resolutions.push({...conflict,id,choice,resolvedAt:new Date().toISOString()});
-  next.customers=next.customers.filter(c=>c.id!==id).concat(clone(chosen));
+  const decision={...conflict,id,choice,resolvedAt:new Date().toISOString()};
+  next.cloud.resolutions.push(decision);
+  // Keep the rejected originals with the customer so all devices and future
+  // backups retain the review history. Avoid recursively nesting old archives.
+  const snapshot=value=>{if(!value)return null;const {syncResolutions,...rest}=value;return rest;};
+  const archived={...decision,base:snapshot(decision.base),local:snapshot(decision.local),remote:snapshot(decision.remote)};
+  const resolved={...clone(chosen),syncResolutions:[...(chosen.syncResolutions||[]),archived]};
+  next.customers=next.customers.filter(c=>c.id!==id).concat(resolved);
   // Baseline is the reviewed remote, but its update time is obtained fresh.
   // A concurrent remote change therefore cannot be overwritten by resolution.
   if(conflict.remote)next.cloud.base[id]={value:clone(conflict.remote),updateTime:null};

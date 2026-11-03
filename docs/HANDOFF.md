@@ -51,7 +51,7 @@ Use small branches and PRs. A second GPT can read this public repository; editin
 The owner uses a Chromebook, so the desktop browser extension is unavailable in this session. A separate service account with **only** `roles/firebaserules.admin` can be stored as the encrypted repository secret `FIREBASE_RULES_SERVICE_ACCOUNT_JSON`. See [FIREBASE_OWNER_SETUP.fa.md](FIREBASE_OWNER_SETUP.fa.md) for exact owner steps. The manual workflow `.github/workflows/firebase-rules-control.yml` is fixed to `main`, the dedicated repository and project `daftar-insurance-ledger`; operation `verify` tests Rules API access without mutation. Operation `publish` refuses the `SETUP_BLOCKED` deny-all placeholder until UID-scoped production rules, emulator proof and client sync exist. The workflow never runs on PR code or changes billing/Auth/Firestore records. Do not ask for or reveal the JSON key. No successful provider verification or cloud sync has happened yet.
 
 
-## Chrome continuation — 2026-11-02 ET
+## Chrome continuation — 2026-11-02 ET (latest state)
 
 Verified through the owner's Chrome extension: Spark no-cost plan; empty `(default)` Firestore database at `me-central2`; live deny-all client rules; existing `Daftar GitHub Pages` web app; one dedicated Email/Password Auth user now exists. Email/Password was enabled in this session. Workflow run 41564719054 successfully verified the rules-only secret, without publishing rules or touching records. No service-account JSON or account password was read.
 
@@ -66,3 +66,5 @@ Initial connection requires an explicit backup and preview. A nonempty local led
 Validation and remaining gates are recorded in VALIDATION.md. Live two-device acceptance, physical phone/offline checks, and migration of real records have NOT been performed. Never claim them from the in-memory tests alone.
 
 Firestore emulator CI passed on run 41568147086: all three owner/anonymous/other-user authorization test groups passed, plus all 52 Node checks. Live rules still deny-all; no production customer records were created.
+
+The complete REST transport test passed in run 41568951641 (four emulator groups); 54 local checks now pass, including 19 sync checks. Single-document commits put the update-time precondition in the JSON body. HTTP 400 FAILED_PRECONDITION also triggers reread/reconciliation. Both original customer versions are retained in the synced customer syncResolutions archive after an explicit resolution, so review history is portable across devices. Backups with unresolved originals reinstate the review requirement when connected again.

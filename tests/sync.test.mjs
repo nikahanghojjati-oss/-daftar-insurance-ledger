@@ -42,7 +42,7 @@ test('same name edits require review; originals survive resolution and backup',a
  a.mutate(l=>l.customers[0].name='نام الف');b.mutate(l=>l.customers[0].name='نام ب');await a.engine.run();await b.engine.run();
  assert.equal(b.engine.status,'conflict');assert.equal(b.data.cloud.conflicts.c1.local.name,'نام ب');assert.equal(b.data.cloud.conflicts.c1.remote.name,'نام الف');
  await b.engine.resolve('c1','local');assert.equal(b.engine.status,'confirmed');assert.equal(remote.docs.get('c1').value.name,'نام ب');
- assert.equal(b.data.cloud.resolutions.length,1);assert.ok(backupLedger(b.data).syncResolutionHistory);
+ assert.equal(b.data.cloud.resolutions.length,1);assert.equal(remote.docs.get('c1').value.syncResolutions[0].remote.name,'نام الف');assert.ok(backupLedger(b.data).syncResolutionHistory);
 });
 test('concurrent separate fields and separate customer additions merge',()=>{
  const base=customer(),a=cp(base),b=cp(base);a.name='الف';b.phone='123';const result=mergeCustomer(base,a,b,'toman');assert.deepEqual(result.conflicts,[]);assert.equal(result.value.name,'الف');assert.equal(result.value.phone,'123');
@@ -114,4 +114,9 @@ test('Firestore HTTP 400 FAILED_PRECONDITION rereads rather than abandoning pend
  const initial=ledger(),remote=new Remote(initial),a=device(remote,initial);await connect(a);a.mutate(l=>l.customers[0]=receipt(l.customers[0],'A'));
  const put=remote.put.bind(remote);let once=true;remote.put=async(c,v)=>{if(once){once=false;remote.seed(receipt(remote.docs.get('c1').value,'B'));throw new CloudError(400,'FAILED_PRECONDITION');}return put(c,v);};
  await a.engine.run();assert.equal(a.engine.status,'confirmed');assert.equal(a.data.customers[0].policies[0].payments.length,2);
+});
+
+test('a portable backup with unresolved originals requires review again after connection',()=>{
+ const source=initializeCloud(ledger(),LEDGER_UID);source.cloud.conflicts.c1={base:null,local:source.customers[0],remote:customer(),paths:['name'],at:new Date().toISOString()};
+ const restored=initializeCloud(backupLedger(source),LEDGER_UID);assert.ok(restored.cloud.conflicts.c1);assert.throws(()=>queueChanges(restored,{...restored}),/اختلاف/);
 });
