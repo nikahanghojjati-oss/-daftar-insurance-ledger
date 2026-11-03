@@ -10,6 +10,7 @@ const STORE={demo:'daftar.demo.v1',own:'daftar.ledger.v1'},MODE='daftar.mode.v1'
 let mode='demo',data,baseRaw=null,storageOK=true,corrupt=false,view='home',selected=null,query='',filter='all',dueFilter='all',offlineReady=false,offlineIssue=false,offlineBusy=false,offlineMessage='در حال بررسی آفلاین…',offlineDetail='',importCandidate=null,toastTimer,shownDay=today(),clockVerified=false,lastClockCheck=0,clockBusy=false;
 try{mode=localStorage.getItem(MODE)==='own'?'own':'demo';const raw=localStorage.getItem(STORE[mode]);if(raw){data=validateLedger(JSON.parse(raw));baseRaw=raw;}else if(mode==='demo'){data=demoLedger();baseRaw=JSON.stringify(data);localStorage.setItem(STORE.demo,baseRaw);}else{mode='demo';data=demoLedger();baseRaw=JSON.stringify(data);localStorage.setItem(STORE.demo,baseRaw);}localStorage.setItem('daftar.storage-check','1');localStorage.removeItem('daftar.storage-check');}catch(e){storageOK=false;try{corrupt=!!localStorage.getItem(STORE[mode]);}catch{}data=demoLedger();}
 function readOwn(){const raw=localStorage.getItem(STORE.own);return raw?validateLedger(JSON.parse(raw)):null;}
+function ownConnected(){try{return !!readOwn()?.cloud;}catch{return false;}}
 let syncTimer;
 const sync = new LedgerSync({read:readOwn,write:next=>{
   if($('#dialog').open && $('#dialog').querySelector('#customer-form,#policy-form,#payment-form,#schedule-form'))throw Error('FORM_IN_PROGRESS');
@@ -138,7 +139,7 @@ function showHelp(){openDialog(`${modalTitle('دفتر، به زبان ساده'
 function download(content,name){const blob=new Blob([content],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);}
 function exportLedger(){download(JSON.stringify({...backupLedger(data),exportedAt:new Date().toISOString(),app:'daftar'},null,2),`daftar-${mode}-${today()}.json`);try{localStorage.setItem('daftar.backup.'+mode,today());localStorage.setItem('daftar.backup-revision.'+mode,data.revision||'legacy');}catch{}render();toast('فایل پشتیبان آماده شد؛ آن را در پوشه دانلودها نگه دارید.');}
 async function importFile(file){
-  if(!file)return;if(readOwn()?.cloud){toast('بازگرداندن جایگزین در دفتر متصل غیرفعال است. پشتیبان و سابقه فعلی نگه داشته می‌شود.',true);return;}if(file.size>10*1024*1024){toast('اندازه فایل باید کمتر از ۱۰ مگابایت باشد.',true);return;}
+  if(!file)return;if(ownConnected()){toast('بازگرداندن جایگزین در دفتر متصل غیرفعال است. پشتیبان و سابقه فعلی نگه داشته می‌شود.',true);return;}if(file.size>10*1024*1024){toast('اندازه فایل باید کمتر از ۱۰ مگابایت باشد.',true);return;}
   try{const candidate=backupLedger(validateLedger(JSON.parse(await file.text())));
     openDialog(`${modalTitle('بررسی فایل پشتیبان','پیش از بازگرداندن، اطلاعات فایل را بررسی کنید.')}<div class="import-summary"><b>${money(candidate.customers.length)} مشتری</b><span>واحد پول: ${CURRENCIES[candidate.currency]}</span><span>مانده کل: ${money(ledgerSummary(candidate).owed)} ${CURRENCIES[candidate.currency]}</span></div><div class="alert">این فایل جای دفتر شخصی فعلی را می‌گیرد. اطلاعات نمونه جدا می‌ماند. اگر دفتر شخصی دارید، ابتدا پشتیبان آن را دریافت کنید.</div>${button('دریافت پشتیبان دفتر فعلی','export-own','secondary','backup')}<label class="confirm-check"><input type="checkbox" id="restore-confirm">می‌دانم که دفتر شخصی فعلی جایگزین می‌شود.</label><div class="form-error" id="form-error" role="alert"></div><div class="form-actions">${button('بازگرداندن دفتر','confirm-import','primary','check')}${button('انصراف','close','secondary','')}</div>`);importCandidate={data:candidate,raw:localStorage.getItem(STORE.own)};
   }catch(e){toast(e.message.startsWith('فایل')?e.message:'فایل خوانده نشد. یک پشتیبان JSON سالم انتخاب کنید.',true);}
@@ -155,7 +156,7 @@ document.addEventListener('click',async event=>{
     else if(a==='discard-draft'){const f=$('#dialog form');discardDraft(f);closeDialog();render();toast('فرم ناتمام پاک شد؛ حساب‌ها تغییری نکرد.');}
     else if(a==='confirm-import'){
       await withLedgerLock(()=>{
-      if(readOwn()?.cloud)throw Error('دفتر متصل را نمی‌توان با پشتیبان جایگزین کرد.');
+      if(ownConnected())throw Error('دفتر متصل را نمی‌توان با پشتیبان جایگزین کرد.');
       if(!$('#restore-confirm').checked)throw new Error('برای ادامه، تأیید جایگزینی دفتر را علامت بزنید.');
       if(!importCandidate)throw Error('فایل پشتیبان را دوباره انتخاب کنید.');
       if(localStorage.getItem(STORE.own)!==importCandidate.raw)throw Error('دفتر در پنجره دیگری تغییر کرده است. فایل را دوباره انتخاب کنید.');
@@ -192,7 +193,7 @@ document.addEventListener('submit',async event=>{
     if(form.id==='setup-form'){
       await withLedgerLock(()=>{
       if(!Object.hasOwn(CURRENCIES,v.currency))throw new Error('واحد پول را انتخاب کنید.');
-      if(readOwn()?.cloud)throw Error('دفتر متصل را نمی‌توان دوباره ایجاد کرد.');
+      if(ownConnected())throw Error('دفتر متصل را نمی‌توان دوباره ایجاد کرد.');
       const existing=localStorage.getItem(STORE.own);if(existing&&validateLedger(JSON.parse(existing)).customers.length)throw new Error('دفتر شخصی اطلاعات دارد؛ واحد پول آن تغییر نمی‌کند.');
       const next=emptyLedger(v.currency),raw=JSON.stringify(next);localStorage.setItem(STORE.own,raw);localStorage.setItem(MODE,'own');mode='own';data=next;baseRaw=raw;closeDialog();go('customers');toast('دفتر شما آماده است. اولین مشتری را اضافه کنید.');
       });
