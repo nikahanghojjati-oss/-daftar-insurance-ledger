@@ -1,7 +1,7 @@
-const CACHE_VERSION='daftar-shell-v14';
+const CACHE_VERSION='daftar-shell-v15';
 const CACHE_SCOPE=new URL(self.registration.scope).pathname;
 const CACHE=CACHE_VERSION+':'+CACHE_SCOPE;
-const SHELL=['./','./index.html','./app.js','./core.js','./clock.js','./firebase-config.js','./firebase-rest.js','./sync-model.js','./sync.js','./offline.js','./style.css','./readability.css','./recovery.css','./finance.css','./professional.css','./fonts/Vazirmatn.woff2','./icon.svg','./manifest.webmanifest'];
+const SHELL=['./','./index.html','./app.js','./core.js','./clock.js','./firebase-config.js','./firebase-rest.js','./connectivity.js','./sync-model.js','./sync.js','./offline.js','./style.css','./readability.css','./recovery.css','./finance.css','./professional.css','./fonts/Vazirmatn.woff2','./icon.svg','./manifest.webmanifest'];
 const absolute=path=>new URL(path,self.registration.scope).href;
 async function download(path){
   const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),15000);
