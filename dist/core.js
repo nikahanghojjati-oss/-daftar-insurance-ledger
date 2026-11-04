@@ -66,7 +66,7 @@ export function addMonths(iso,n) {
 }
 export const firstInsuranceDue=issued=>addDays(addMonths(issued,1),15);
 export function makePolicy(input) {
-  const frequency=input.frequency || 'month-plus-15';
+  const frequency=input.frequency || 'monthly';
   const total=amount(input.total),cash=input.plan==='cash',down=cash?total:amount(input.down || '0'),count=cash?0:amount(input.count || '1');
   if(total<=0) throw new Error('مبلغ کل بیمه باید بیشتر از صفر باشد.');
   if(down>total) throw new Error('پیش‌پرداخت نمی‌تواند بیشتر از مبلغ کل باشد.');

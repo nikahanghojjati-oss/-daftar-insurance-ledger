@@ -99,3 +99,7 @@ The owner supplied Galaxy A20 SM-A205F/DS and 720×1560 physical panel pixels. C
 ## Recurring calendar default
 
 57 local tests pass after correcting the default to one Persian calendar month plus 15 days for each successive installment. Three new regression cases cover the complete expected date sequence, custom first dates, non-leap Esfand clamping (calendar recurrence differs from a fixed 45 days), exact totals, backup acceptance, and unchanged explicit monthly/weekly intervals. Existing persisted schedules are not regenerated. Source syntax and diff checks pass. Live form verification follows deployment.
+
+## Installment default correction — 2026-11-03 ET
+
+Owner clarified final schedule: first installment = issuance + 1 Jalali month + 15 calendar days; all subsequent installments monthly, anchored to the first due date. Code default and new-policy form selection now use the existing `monthly` logic. A new 5-Esfand regression expects Farvardin 20, Ordibehesht 20, Khordad 20, Tir 20, Mordad 20. An explicit `month-plus-15` regression preserves older recurring schedules and their backup validation, with existing calendar, custom date, amount, and weekly tests remaining in place. Cache v13 forces a fresh offline shell. CI/runtime check is required on the PR; no live phone or Firebase claim from this change.

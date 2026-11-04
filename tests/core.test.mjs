@@ -82,14 +82,20 @@ test('Backup round trip and strict invalid-file rejection',()=>{
 
 
 
-test('New policies default to a Persian month plus 15 days for EVERY installment',()=>{
+test('New policies default to first Jalali month plus 15 days, then anchored monthly installments',()=>{
   const input={title:'بیمه',total:'۱۰۰۱',down:'۱۰۱',count:'۵',plan:'installments',paymentDate:'۱۴۰۴/۱۲/۰۵'};
   const p=makePolicy(input),regular=p.installments.filter(i=>i.kind==='regular');
-  assert.equal(p.frequency,'month-plus-15');
-  assert.deepEqual(regular.map(i=>dateInput(i.dueDate)),['۱۴۰۵/۰۱/۲۰','۱۴۰۵/۰۳/۰۴','۱۴۰۵/۰۴/۱۹','۱۴۰۵/۰۶/۰۳','۱۴۰۵/۰۷/۱۸']);
-  for(let n=1;n<regular.length;n++)assert.equal(regular[n].dueDate,firstInsuranceDue(regular[n-1].dueDate));
+  assert.equal(p.frequency,'monthly');
+  assert.deepEqual(regular.map(i=>dateInput(i.dueDate)),['۱۴۰۵/۰۱/۲۰','۱۴۰۵/۰۲/۲۰','۱۴۰۵/۰۳/۲۰','۱۴۰۵/۰۴/۲۰','۱۴۰۵/۰۵/۲۰']);
+  for(let n=1;n<regular.length;n++)assert.equal(regular[n].dueDate,addMonths(regular[0].dueDate,n));
   assert.equal(p.installments.reduce((sum,i)=>sum+i.amount,0),1001);assert.equal(policySummary(p).owed,900);
   const restored=validateLedger(JSON.parse(JSON.stringify({...emptyLedger('toman'),customers:[{id:'customer',name:'آزمایش',phone:'',notes:'',policies:[p]}]})));
+  assert.equal(restored.customers[0].policies[0].frequency,'monthly');
+});
+test('Legacy recurring one-month-plus-15-day cadence remains explicit and restorable',()=>{
+  const p=makePolicy({title:'بیمه',total:'۱۰۰۱',down:'۱۰۱',count:'۵',plan:'installments',paymentDate:'۱۴۰۴/۱۲/۰۵',frequency:'month-plus-15'});
+  assert.deepEqual(p.installments.filter(i=>i.kind==='regular').map(i=>dateInput(i.dueDate)),['۱۴۰۵/۰۱/۲۰','۱۴۰۵/۰۳/۰۴','۱۴۰۵/۰۴/۱۹','۱۴۰۵/۰۶/۰۳','۱۴۰۵/۰۷/۱۸']);
+  const restored=validateLedger(JSON.parse(JSON.stringify({...emptyLedger('toman'),customers:[{id:'customer',name:'قدیمی',phone:'',notes:'',policies:[p]}]})));
   assert.equal(restored.customers[0].policies[0].frequency,'month-plus-15');
 });
 test('Calendar-plus-15 recurrence clamps Esfand correctly and supports a custom first date',()=>{
