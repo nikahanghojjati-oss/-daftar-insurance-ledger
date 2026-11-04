@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="robots" content="noindex,nofollow">
+<title>بررسی اتصال دفتر به Firebase</title>
+<style>
+  :root{font-family:Tahoma,Arial,sans-serif;background:#f6f7f8;color:#203943}
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px 16px;min-height:100vh}
+  main{margin:30px auto;max-width:560px;border:1px solid #dee7ea;border-radius:18px;background:#fff;padding:24px 20px;box-shadow:0 8px 24px #162d3510}
+  h1{font-size:23px;line-height:1.6;margin:0 0 12px}p{line-height:2;font-size:16px;color:#405764}
+  .hint{padding:12px;background:#f1f6f5;border-radius:10px}
+  button{min-height:48px;border:0;border-radius:10px;background:#24584b;color:white;font-size:16px;font-weight:bold;padding:12px 20px;cursor:pointer}
+  button:disabled{opacity:.55}
+  button.secondary{color:#24584b;background:#e6f0ec}
+  .actions{display:flex;gap:10px;flex-wrap:wrap}
+  #result{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f7f8;padding:16px;border-radius:10px;min-height:70px;margin-top:16px}
+  a{color:#175a4a}
+  code{direction:ltr;unicode-bidi:isolate;font-size:12px}
+</style>
+</head>
+<body>
+<main>
+<h1>بررسی اتصال دفتر به Firebase</h1>
+<p>این صفحه مستقل از صفحه ورود دفتر باز می‌شود تا بتوانیم مشکل اتصال روی گوشی را پیدا کنیم.</p>
+<p class="hint">این آزمایش به رمز یا ایمیل شما نیاز ندارد و هیچ اطلاعات مشتری یا پرداختی را تغییر نمی‌دهد. فقط از یک حساب آزمایشی ساختگی استفاده می‌کند.</p>
+<div class="actions">
+  <button id="test" type="button">شروع بررسی اتصال</button>
+  <button id="copy" type="button" class="secondary" hidden>کپی نتیجه</button>
+</div>
+<div id="result" role="status" aria-live="polite">برای شروع، دکمه «شروع بررسی اتصال» را بزنید.</div>
+<p><a href="./">بازگشت به دفتر</a></p>
+<small>آزمایش اتصال نسخه ۱ · بدون نیاز به ورود</small>
+</main>
+<script type="module">
+import {inspectFirebaseConnection} from './connectivity.js';
+const test=document.getElementById('test');
+const result=document.getElementById('result');
+const copy=document.getElementById('copy');
+let report='';
+test.addEventListener('click',async()=>{
+  test.disabled=true;copy.hidden=true;
+  try {
+    const diagnosis=await inspectFirebaseConnection({onProgress:message=>{result.textContent=message;}});
+    report=diagnosis.code;
+    result.textContent=diagnosis.summary+'\n\nکد آزمایش:\n'+diagnosis.code;
+    copy.hidden=false;
+  }catch{
+    result.textContent='آزمایش کامل نشد. لطفاً همین صفحه را با Wi-Fi و اینترنت موبایل امتحان کنید و از پیام عکس بفرستید.';
+  }finally{test.disabled=false;}
+});
+copy.addEventListener('click',async()=>{
+  if(!report)return;
+  try{await navigator.clipboard.writeText(report);copy.textContent='نتیجه کپی شد';}
+  catch{copy.textContent='از کد آزمایش عکس بگیرید';}
+});
+</script>
+</body>
+</html>
