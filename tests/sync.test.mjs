@@ -120,3 +120,23 @@ test('a portable backup with unresolved originals requires review again after co
  const source=initializeCloud(ledger(),LEDGER_UID);source.cloud.conflicts.c1={base:null,local:source.customers[0],remote:customer(),paths:['name'],at:new Date().toISOString()};
  const restored=initializeCloud(backupLedger(source),LEDGER_UID);assert.ok(restored.cloud.conflicts.c1);assert.throws(()=>queueChanges(restored,{...restored}),/اختلاف/);
 });
+
+test('Firebase login exposes the specific public error code, not generic INVALID_ARGUMENT',async()=>{
+  const client=new FirebaseRest({fetcher:async()=>Response.json({error:{code:400,message:'INVALID_LOGIN_CREDENTIALS',status:'INVALID_ARGUMENT'}},{status:400}),storage:{getItem:()=>null,setItem(){throw Error('must not save');}}});
+  await assert.rejects(client.signIn('test@example.invalid','wrong-password'),error=>error.code==='INVALID_LOGIN_CREDENTIALS'&&error.status===400);
+});
+test('Login messages distinguish wrong owner, credential failure, project configuration and network',async()=>{
+  const {explainLoginFailure}=await import('../dist/firebase-rest.js');
+  assert.match(explainLoginFailure(new CloudError(400,'INVALID_LOGIN_CREDENTIALS')),/ایمیل یا رمز/);
+  assert.match(explainLoginFailure(new CloudError(403,'WRONG_LEDGER_ACCOUNT')),/حساب اختصاصی/);
+  assert.match(explainLoginFailure(new CloudError(400,'OPERATION_NOT_ALLOWED')),/Sign-in method/);
+  assert.match(explainLoginFailure(new CloudError(403,'API_KEY_HTTP_REFERRER_BLOCKED')),/کلید API/);
+  assert.match(explainLoginFailure(new CloudError(0,'NETWORK_UNAVAILABLE')),/Safari/);
+  assert.ok(!explainLoginFailure(new CloudError(400,'INVALID_LOGIN_CREDENTIALS')).includes('wrong-password'));
+});
+test('Failed network sign-in gives a diagnostic and never saves a session',async()=>{
+  let saved=false;
+  const client=new FirebaseRest({fetcher:async()=>{throw new TypeError('Failed to fetch');},storage:{getItem:()=>null,setItem(){saved=true;}}});
+  await assert.rejects(client.signIn('test@example.invalid','not-a-real-password'),error=>error.code==='NETWORK_UNAVAILABLE');
+  assert.equal(saved,false);
+});

@@ -1,6 +1,7 @@
 import {prepareOffline} from './offline.js';
 import {verifyClock} from './clock.js';
 import {LedgerSync,withLedgerLock,queueChanges,backupLedger} from './sync.js';
+import {explainLoginFailure} from './firebase-rest.js';
 import {CURRENCIES,MONTHS,digits,fa,normalize,money,amount,uid,today,addDays,firstInsuranceDue,dateInput,dateLabel,parseDate,makePolicy,reviseSchedule,recordPayment,similarPayments,voidPayment,restorePayment,policySummary,customerSummary,ledgerSummary,dueItems,validateLedger,emptyLedger,demoLedger} from './core.js';
 
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -336,9 +337,14 @@ document.addEventListener('submit',async event=>{
   const form=event.target;if(form.id!=='cloud-login-form')return;
   event.preventDefault();const submitButton=form.querySelector('button');submitButton.disabled=true;
   const email=form.elements.email.value, password=form.elements.password.value;
-  try{await sync.signIn(email,password);form.elements.password.value='';closeDialog();if(readOwn()?.cloud)await sync.run();else await cloudPreview();}
-  catch{formError(Error('ورود انجام نشد؛ ایمیل و رمز حساب دفتر، اتصال اینترنت و تنظیمات Firebase را بررسی کنید.'));}
-  finally{submitButton.disabled=false;}
+  try {await sync.signIn(email.trim(),password);}
+  catch(error){formError(Error(explainLoginFailure(error)));return;}
+  finally {form.elements.password.value='';submitButton.disabled=false;}
+  // A successful sign-in is not a failed password when a subsequent Firestore
+  // read or first-device join has a separate problem.
+  closeDialog();
+  try {if(readOwn()?.cloud)await sync.run();else await cloudPreview();}
+  catch(error){toast('ورود با موفقیت انجام شد، ولی دریافت دفتر آنلاین کامل نشد. اینترنت و تنظیمات Firebase را بررسی کنید؛ اطلاعات محلی تغییر نکرده است.',true);}
 });
 
 function saveStrip(){
