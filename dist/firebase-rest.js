@@ -4,6 +4,20 @@ const AUTH_KEY='daftar.firebase.session.v1';
 export class CloudError extends Error {
   constructor(status,code) {super(code);this.status=status;this.code=code;}
 }
+// Deliberately show only controlled error codes; never echo Firebase response
+// bodies, the typed password, tokens or an email address into the interface.
+export function explainLoginFailure(error) {
+  const code=String(error?.code||'').split(':')[0].trim().toUpperCase();
+  if(code==='WRONG_LEDGER_ACCOUNT')return 'ایمیل و رمز پذیرفته شدند، اما این حساب، حساب اختصاصی این دفتر نیست. مدیر دفتر باید ایمیل کاربر اصلی را در Firebase Authentication ← Users بررسی کند. حساب تازه نسازید.';
+  if(['INVALID_LOGIN_CREDENTIALS','EMAIL_NOT_FOUND','INVALID_PASSWORD','INVALID_EMAIL','USER_NOT_FOUND'].includes(code))return 'ایمیل یا رمز حساب اختصاصی دفتر پذیرفته نشد. ایمیل را دقیقاً با حساب موجود در Firebase Authentication ← Users مقایسه کنید. رمز Gmail یا ورود به کنسول Firebase، رمز این حساب نیست. [INVALID_LOGIN_CREDENTIALS]';
+  if(code==='USER_DISABLED')return 'این حساب در Firebase غیرفعال شده است؛ مدیر دفتر باید آن را در Authentication ← Users بررسی کند. [USER_DISABLED]';
+  if(code==='OPERATION_NOT_ALLOWED')return 'ورود با ایمیل و رمز در این پروژه Firebase فعال نیست؛ مدیر دفتر باید آن را در Authentication ← Sign-in method بررسی کند. [OPERATION_NOT_ALLOWED]';
+  if(['API_KEY_INVALID','API_KEY_HTTP_REFERRER_BLOCKED','API_KEY_SERVICE_BLOCKED','API_KEY_API_TARGET_BLOCKED','PROJECT_NOT_FOUND','CONFIGURATION_NOT_FOUND'].includes(code))return 'تنظیمات اتصال برنامه به Firebase مشکل دارد. مدیر دفتر باید کلید API، محدودیت‌های آن و پروژه را بررسی کند. ['+code+']';
+  if(['TOO_MANY_ATTEMPTS_TRY_LATER','QUOTA_EXCEEDED'].includes(code))return 'ورود موقتاً به‌دلیل تعداد زیاد تلاش‌ها محدود شده است. کمی بعد دوباره امتحان کنید. ['+code+']';
+  if(['NETWORK_UNAVAILABLE','REQUEST_TIMEOUT','BAD_RESPONSE'].includes(code))return 'ارتباط با Firebase برقرار نشد. لینک دفتر را مستقیم در Safari یا Chrome، بیرون از مرورگر داخلی ChatGPT باز کنید و اینترنت را بررسی کنید. ['+code+']';
+  if(code==='STORAGE_UNAVAILABLE')return 'مرورگر نمی‌تواند دسترسی این دستگاه را نگه دارد. لینک دفتر را در Safari یا Chrome معمولی باز کنید. [STORAGE_UNAVAILABLE]';
+  return 'ورود به دفتر کامل نشد. لطفاً به مدیر دفتر اطلاع دهید. کد خطا: '+(/^[A-Z][A-Z0-9_]{1,65}$/.test(code)?code:'UNKNOWN');
+}
 export class FirebaseRest {
   constructor({fetcher=globalThis.fetch,storage=globalThis.localStorage,config=FIREBASE,owner=LEDGER_UID}={}) {
     Object.assign(this,{fetcher,storage,config,owner});this.requests=0;this.reads=0;this.writes=0;this.refreshing=null;
@@ -14,16 +28,27 @@ export class FirebaseRest {
     if(++this.requests>1500)throw new CloudError(429,'SESSION_LIMIT');
     const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),15000);
     try {
-      const response=await this.fetcher(url,{...options,cache:'no-store',referrerPolicy:'no-referrer',signal:controller.signal});
-      const body=await response.json();
-      if(!response.ok)throw new CloudError(response.status,body.error?.status||body.error?.message||'REQUEST_FAILED');
+      let response;
+      try {response=await this.fetcher(url,{...options,cache:'no-store',referrerPolicy:'no-referrer',signal:controller.signal});}
+      catch(error){throw new CloudError(0,error?.name==='AbortError'?'REQUEST_TIMEOUT':'NETWORK_UNAVAILABLE');}
+      let body;
+      try {body=await response.json();}
+      catch{throw new CloudError(response.status,'BAD_RESPONSE');}
+      if(!response.ok) {
+        // Firebase often returns generic status INVALID_ARGUMENT while
+        // error.message contains the useful INVALID_LOGIN_CREDENTIALS code.
+        const detail=String(body?.error?.message||body?.error?.status||'REQUEST_FAILED').split(/[\s:]/)[0];
+        throw new CloudError(response.status,/^[A-Z][A-Z0-9_]{1,65}$/.test(detail)?detail:'REQUEST_FAILED');
+      }
       return body;
     } finally {clearTimeout(timer);}
   }
   async signIn(email,password) {
     const result=await this.request(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${encodeURIComponent(this.config.apiKey)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password,returnSecureToken:true})});
     if(result.localId!==this.owner)throw new CloudError(403,'WRONG_LEDGER_ACCOUNT');
-    this.saveSession(result.idToken,result.refreshToken,result.expiresIn);return true;
+    try {this.saveSession(result.idToken,result.refreshToken,result.expiresIn);}
+    catch(error){if(error instanceof CloudError)throw error;throw new CloudError(0,'STORAGE_UNAVAILABLE');}
+    return true;
   }
   saveSession(idToken,refreshToken,expiresIn) {
     if(!idToken||!refreshToken)throw new CloudError(401,'INVALID_SESSION');
