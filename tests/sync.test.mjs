@@ -140,3 +140,13 @@ test('Failed network sign-in gives a diagnostic and never saves a session',async
   await assert.rejects(client.signIn('test@example.invalid','not-a-real-password'),error=>error.code==='NETWORK_UNAVAILABLE');
   assert.equal(saved,false);
 });
+
+test('Firestore transport preserves FAILED_PRECONDITION even with a non-code message',async()=>{
+  const remote=new FirebaseRest({fetcher:async()=>Response.json({error:{status:'FAILED_PRECONDITION',message:'Document update_time did not match'}},{status:400}),storage:{getItem:()=>null}});
+  remote.token=async()=> 'dummy';
+  await assert.rejects(remote.firestore('/customers/fictional'),error=>error.status===400&&error.code==='FAILED_PRECONDITION');
+});
+test('Auth transport preserves actionable code even when HTTP status is generic',async()=>{
+  const remote=new FirebaseRest({fetcher:async()=>Response.json({error:{status:'PERMISSION_DENIED',message:'API_KEY_HTTP_REFERRER_BLOCKED'}},{status:403}),storage:{getItem:()=>null}});
+  await assert.rejects(remote.signIn('test@example.invalid','dummy'),error=>error.code==='API_KEY_HTTP_REFERRER_BLOCKED');
+});
