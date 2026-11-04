@@ -2,6 +2,7 @@ import {prepareOffline} from './offline.js';
 import {verifyClock} from './clock.js';
 import {LedgerSync,withLedgerLock,queueChanges,backupLedger} from './sync.js';
 import {explainLoginFailure} from './firebase-rest.js';
+import {inspectFirebaseConnection} from './connectivity.js';
 import {CURRENCIES,MONTHS,digits,fa,normalize,money,amount,uid,today,addDays,firstInsuranceDue,dateInput,dateLabel,parseDate,makePolicy,reviseSchedule,recordPayment,similarPayments,voidPayment,restorePayment,policySummary,customerSummary,ledgerSummary,dueItems,validateLedger,emptyLedger,demoLedger} from './core.js';
 
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -294,7 +295,7 @@ function cloudPanel(){
   const conflicts=Object.entries(data.cloud?.conflicts||{});
   return `<section class="panel settings-card cloud-card"><h2>اتصال آنلاین دفتر</h2><p>${data.cloud?esc(cloudMessage()):'راه‌اندازی فقط یک بار روی هر دستگاه انجام می‌شود. دفتر نمونه هرگز ارسال نمی‌شود.'}</p>${data.cloud?button('همگام‌سازی اکنون','cloud-sync','secondary','clock'):button(sync.remote.session()?'بررسی اتصال دفتر':'ورود اولیه دستگاه','cloud-connect','secondary','shield')}${sync.status==='error'?button('تمدید ورود دستگاه','cloud-login','secondary','shield'):''}<p>بررسی آنلاین هنگام بازگشت به صفحه، اتصال دوباره اینترنت، ذخیره تغییر و زدن دکمه همگام‌سازی انجام می‌شود. فایل پشتیبان را همچنان نگه دارید.</p>${conflicts.map(([id,c])=>`<div class="alert"><p>اختلاف در پرونده ${esc(c.local?.name||c.remote?.name||'مشتری')}؛ هیچ‌کدام از دو نسخه حذف نشده است.</p>${button('مقایسه دو نسخه','cloud-conflict','secondary','file',`data-id="${esc(id)}"`)}</div>`).join('')}</section>`;
 }
-function cloudLogin(){openDialog(`${modalTitle('ورود اولیه دستگاه','ایمیل و رمز حساب اختصاصی دفتر را وارد کنید. پس از ورود، دستگاه دسترسی را نگه می‌دارد؛ رمز ذخیره نمی‌شود.')}<form id="cloud-login-form"><label>ایمیل<input name="email" type="email" autocomplete="username" dir="ltr" required></label><label>رمز عبور<input name="password" type="password" autocomplete="current-password" dir="ltr" required></label><p>ورود به معنی تأیید نگه داشتن دسترسی همین دستگاه است. از دستگاه شخصی استفاده کنید.</p><div class="form-error" id="form-error" role="alert"></div><div class="form-actions"><button type="submit" class="btn primary">ورود و نگه داشتن دسترسی دستگاه</button></div></form>`);}
+function cloudLogin(){openDialog(`${modalTitle('ورود اولیه دستگاه','ایمیل و رمز حساب اختصاصی دفتر را وارد کنید. پس از ورود، دستگاه دسترسی را نگه می‌دارد؛ رمز ذخیره نمی‌شود.')}<form id="cloud-login-form"><label>ایمیل<input name="email" type="email" autocomplete="username" dir="ltr" required></label><label>رمز عبور<input name="password" type="password" autocomplete="current-password" dir="ltr" required></label><p>ورود به معنی تأیید نگه داشتن دسترسی همین دستگاه است. از دستگاه شخصی استفاده کنید.</p><div class="form-error" id="form-error" role="alert"></div><div id="firebase-connection-test" hidden><button class="btn secondary" data-action="cloud-diagnose" type="button">بررسی اتصال Firebase بدون رمز</button><p id="firebase-test-result" role="status" aria-live="polite"></p></div><div class="form-actions"><button type="submit" class="btn primary">ورود و نگه داشتن دسترسی دستگاه</button></div></form>`);}
 async function cloudPreview(){
   if(!sync.remote.session()){cloudLogin();return;}
   const preview=await sync.preview();
@@ -318,6 +319,14 @@ document.addEventListener('click',async event=>{
     if(action==='cloud-settings'){closeDialog();go('backup');}
     if(action==='cloud-sync')await sync.run();
     if(action==='cloud-login')cloudLogin();
+    if(action==='cloud-diagnose'){
+      const result=$('#firebase-test-result');
+      if(result){
+        result.textContent='آزمایش بدون اطلاعات حساب آغاز شد…';
+        const findings=await inspectFirebaseConnection({onProgress:message=>{result.textContent=message;}});
+        result.textContent=findings.summary+' کد آزمایش: '+findings.code;
+      }
+    }
     if(action==='cloud-connect')await cloudPreview();
     if(action==='cloud-backup')download(JSON.stringify(backupLedger(data),null,2),`daftar-before-sync-${today()}.json`);
     if(action==='cloud-join'){
@@ -338,7 +347,14 @@ document.addEventListener('submit',async event=>{
   event.preventDefault();const submitButton=form.querySelector('button');submitButton.disabled=true;
   const email=form.elements.email.value, password=form.elements.password.value;
   try {await sync.signIn(email.trim(),password);}
-  catch(error){formError(Error(explainLoginFailure(error)));return;}
+  catch(error){
+    formError(Error(explainLoginFailure(error)));
+    if(['NETWORK_UNAVAILABLE','REQUEST_TIMEOUT','BAD_RESPONSE'].includes(error?.code)){
+      const check=form.querySelector('#firebase-connection-test');
+      if(check)check.hidden=false;
+    }
+    return;
+  }
   finally {form.elements.password.value='';submitButton.disabled=false;}
   // A successful sign-in is not a failed password when a subsequent Firestore
   // read or first-device join has a separate problem.
