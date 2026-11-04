@@ -19,7 +19,12 @@ export function explainLoginFailure(error) {
   return 'ورود به دفتر کامل نشد. لطفاً به مدیر دفتر اطلاع دهید. کد خطا: '+(/^[A-Z][A-Z0-9_]{1,65}$/.test(code)?code:'UNKNOWN');
 }
 export class FirebaseRest {
-  constructor({fetcher=globalThis.fetch,storage=globalThis.localStorage,config=FIREBASE,owner=LEDGER_UID}={}) {
+  constructor({fetcher=(...args)=>globalThis.fetch(...args),storage=globalThis.localStorage,config=FIREBASE,owner=LEDGER_UID}={}) {
+    // Native browser fetch must be invoked with its own Window receiver.
+    // Storing globalThis.fetch as this.fetcher then calling this.fetcher()
+    // changes the receiver to FirebaseRest, which Safari can reject with
+    // TypeError (previously misreported as NETWORK_UNAVAILABLE). A wrapper
+    // preserves the proper global receiver without affecting fake fetchers.
     Object.assign(this,{fetcher,storage,config,owner});this.requests=0;this.reads=0;this.writes=0;this.refreshing=null;
     this.root=`https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/(default)/documents/ledgers/${owner}`;
   }
