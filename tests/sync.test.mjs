@@ -150,3 +150,30 @@ test('Auth transport preserves actionable code even when HTTP status is generic'
   const remote=new FirebaseRest({fetcher:async()=>Response.json({error:{status:'PERMISSION_DENIED',message:'API_KEY_HTTP_REFERRER_BLOCKED'}},{status:403}),storage:{getItem:()=>null}});
   await assert.rejects(remote.signIn('test@example.invalid','dummy'),error=>error.code==='API_KEY_HTTP_REFERRER_BLOCKED');
 });
+
+test('default browser fetch keeps Window receiver when signing in (Safari regression)',async()=>{
+  // Simulate browser native fetch, which brand-checks its receiver.
+  // The old constructor stored globalThis.fetch as this.fetcher and
+  // this.fetcher() would throw Illegal invocation before any request.
+  const originalFetch=globalThis.fetch;
+  const invoked=[];
+  try{
+    globalThis.fetch=function(url,options) {
+      if(this!==globalThis)throw new TypeError('Illegal invocation: wrong fetch receiver');
+      invoked.push({url,options});
+      return Promise.resolve(Response.json({
+        localId:LEDGER_UID,idToken:'test-token',refreshToken:'test-refresh',expiresIn:'3600'
+      }));
+    };
+    const saved=new Map();
+    const rest=new FirebaseRest({storage:{
+      getItem:key=>saved.get(key)||null,
+      setItem:(key,value)=>saved.set(key,value)
+    }});
+    await rest.signIn('fictional@example.invalid','not-a-real-password');
+    assert.equal(invoked.length,1);
+    assert.equal(rest.session()?.owner,LEDGER_UID);
+    assert.equal(JSON.parse(invoked[0].options.body).email,'fictional@example.invalid');
+    assert.equal(saved.get('daftar.firebase.session.v1').includes('not-a-real-password'),false);
+  }finally{globalThis.fetch=originalFetch;}
+});
