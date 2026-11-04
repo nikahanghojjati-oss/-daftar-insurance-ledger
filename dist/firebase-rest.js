@@ -37,8 +37,16 @@ export class FirebaseRest {
       if(!response.ok) {
         // Firebase often returns generic status INVALID_ARGUMENT while
         // error.message contains the useful INVALID_LOGIN_CREDENTIALS code.
-        const detail=String(body?.error?.message||body?.error?.status||'REQUEST_FAILED').split(/[\s:]/)[0];
-        throw new CloudError(response.status,/^[A-Z][A-Z0-9_]{1,65}$/.test(detail)?detail:'REQUEST_FAILED');
+        const detail=String(body?.error?.message||'').split(/[\s:]/)[0];
+        const status=String(body?.error?.status||'');
+        const valid=value=>/^[A-Z][A-Z0-9_]{1,65}$/.test(value);
+        const auth=url.includes('identitytoolkit.googleapis.com')||url.includes('securetoken.googleapis.com');
+        // Auth's INVALID_ARGUMENT is generic; its message contains the real
+        // login error. Firestore's FAILED_PRECONDITION / PERMISSION_DENIED
+        // status is authoritative even if message is free-form English.
+        const code=auth?(valid(detail)?detail:valid(status)?status:'REQUEST_FAILED')
+          :(valid(status)?status:valid(detail)?detail:'REQUEST_FAILED');
+        throw new CloudError(response.status,code);
       }
       return body;
     } finally {clearTimeout(timer);}
