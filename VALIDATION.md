@@ -119,3 +119,13 @@ The owner reproduced `NETWORK_UNAVAILABLE` in the live mobile UI, so the current
 ## Safari fetch receiver fix — 2026-11-03 ET
 
 Owner device-specific independent probe returned SITE_OK | GOOGLE_REACHABLE | AUTH_REACHABLE while the regular login page displayed NETWORK_UNAVAILABLE. Reproducing the code path showed that `FirebaseRest` stored native `globalThis.fetch` then invoked `this.fetcher()`, binding the receiver to the client instance. Some native browsers reject such calls with Illegal invocation before network activity. Regression test installs a receiver-checking browser-like fetch and verifies default FirebaseRest sign-in uses global receiver and persists only Firebase tokens, not password. The fix uses an arrow wrapper for default fetch, and bumps offline shell version to v16. Firebase Auth real-account login and physical device sync still require owner acceptance after Pages deployment.
+
+
+
+## Connection version diagnostics — 2026-11-04 ET (Atlas)
+
+Added read-only «جزئیات اتصال» in Backup/settings and the initial login form. The running app exports its page release identifier inline; the login transport exports `FIREBASE_CLIENT_VERSION` from the actual loaded firebase-rest module. Display expected shell, last successfully prepared cache and actual document-controller version as separate values. Never substitute prepared-cache version for an absent/unresponsive controller. A controller replacement while a reply is in flight invalidates that reply. Cache protocol v17 includes the new local presentation module.
+
+The login details are appended inline without replacing the credential form. No credential, token, account email, ledger payload or arbitrary session object is included in the diagnostics. There are no new Firebase requests, customer writes, configuration/rules changes or storage resets. The primary submit button is now selected by its submit type, because the form also has a read-only diagnostics button.
+
+Validation: all 73 Node tests pass. Three new cases cover mixed old page/new prepared cache/old controller, unresponsive controller and port cleanup, and absent/replaced/malformed controllers plus escaped/allowlisted output. Existing offline tests verify the added module is cached and available offline. JavaScript syntax checks pass. Chromium UI smoke was attempted but could not launch because this environment has no installed browser executable; no UI/physical-Safari or real-account login/cross-device result is claimed. Owner is unavailable for phone tests tonight. Changes are proposed on a branch/PR; merge and Pages deployment are separate steps. Sol should independently review the exact resulting commit before release.

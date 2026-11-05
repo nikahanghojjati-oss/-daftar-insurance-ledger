@@ -1,7 +1,11 @@
-import {prepareOffline} from './offline.js';
+import {prepareOffline,inspectOfflineController,OFFLINE_CACHE} from './offline.js';
+import {connectionDetails} from './connection-details.js';
+// Bump with page releases; this identifies the running app module, not cached bytes.
+const PAGE_VERSION='2026-11-04.1';
+let preparedCache=null;
 import {verifyClock} from './clock.js';
 import {LedgerSync,withLedgerLock,queueChanges,backupLedger} from './sync.js';
-import {explainLoginFailure} from './firebase-rest.js';
+import {explainLoginFailure,FIREBASE_CLIENT_VERSION} from './firebase-rest.js';
 import {inspectFirebaseConnection} from './connectivity.js';
 import {CURRENCIES,MONTHS,digits,fa,normalize,money,amount,uid,today,addDays,firstInsuranceDue,dateInput,dateLabel,parseDate,makePolicy,reviseSchedule,recordPayment,similarPayments,voidPayment,restorePayment,policySummary,customerSummary,ledgerSummary,dueItems,validateLedger,emptyLedger,demoLedger} from './core.js';
 
@@ -62,6 +66,18 @@ function render(){
 function connectionText(){return `<span class="status-dot ${offlineReady?'ready':''}"></span>${offlineReady?(navigator.onLine?'آماده استفاده آفلاین':'آفلاین · آماده استفاده'):offlineIssue?'<button class="offline-status-btn" data-action="offline-help">آفلاین آماده نشد · بررسی</button>':esc(offlineMessage)}`;}
 function offlineDescription(){return offlineReady?'نسخه آفلاین و فونت روی این دستگاه آماده‌اند؛ می‌توانید اینترنت را قطع کنید.':offlineIssue?offlineMessage:offlineMessage;}
 function offlineActions(){return offlineReady?'':button(offlineBusy?'در حال آماده‌سازی…':'تلاش دوباره برای آفلاین','retry-offline','secondary','clock',offlineBusy?'disabled':'');}
+async function showConnectionDetails(){
+  let target=document.querySelector('#connection-details-content');
+  if(!target){
+    const form=document.querySelector('#cloud-login-form');
+    if(form){target=document.createElement('section');target.id='connection-details-content';target.className='settings-card';form.append(target);}
+    else{openDialog(`${modalTitle('جزئیات اتصال','این بررسی رمز نمی‌خواهد و اطلاعات دفتر را تغییر نمی‌دهد.')}<section id="connection-details-content" class="settings-card" aria-live="polite"></section>${button('بررسی دوباره','connection-details','secondary','clock')}`);target=document.querySelector('#connection-details-content');}
+  }
+  const snapshot=controller=>connectionDetails({pageVersion:PAGE_VERSION,loginVersion:FIREBASE_CLIENT_VERSION,expectedCache:OFFLINE_CACHE,preparedCache,controller});
+  target.innerHTML=snapshot({status:'pending'});
+  const controller=await inspectOfflineController({serviceWorker:navigator.serviceWorker});
+  if(target.isConnected)target.innerHTML=snapshot(controller);
+}
 function showOfflineHelp(){openDialog(`${modalTitle('استفاده بدون اینترنت','آماده شدن برنامه با ذخیره حساب‌ها دو کار جداست.')}<p>${esc(offlineDescription())}</p><p>لینک دفتر را مستقیم در Chrome یا Safari باز کنید. پس از دیدن «آماده استفاده آفلاین»، اینترنت را قطع کنید و صفحه را دوباره باز کنید.</p><p>حساب‌های ثبت‌شده در مرورگر همین دستگاه نگه داشته می‌شوند. فایل پشتیبان را هم جداگانه دریافت کنید.</p>${offlineDetail?`<details class="offline-details"><summary>جزئیات مشکل</summary><p dir="ltr">${esc(offlineDetail)}</p></details>`:''}<div class="form-actions">${offlineActions()}${button('بستن','close','light','close')}</div>`);}
 
 function heading(eyebrow,title,description,action=''){return `<div class="page-heading"><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1><p>${description}</p></div>${action}</div>`;}
@@ -92,7 +108,7 @@ function policyCard(c,p){
   <details class="history"><summary>سابقه پرداخت‌ها <span>${money(p.payments.filter(pmt=>!pmt.voidedAt).length)} پرداخت فعال${p.payments.some(pmt=>pmt.voidedAt)?' · '+money(p.payments.filter(pmt=>pmt.voidedAt).length)+' لغوشده':''}</span></summary>${p.payments.length?`<ul class="payment-history">${[...p.payments].reverse().map(pmt=>`<li class="${pmt.voidedAt?'void-payment':''}"><span class="history-check">${icon(pmt.voidedAt?'close':'check')}</span><div><b>${cash(pmt.amount)}</b><span>${dateLabel(pmt.date)}${pmt.note?' · '+esc(pmt.note):''}</span>${pmt.voidedAt?'<small>لغوشده · در جمع پرداخت‌ها حساب نمی‌شود</small>':pmt.revisions?.length?'<small>پس از لغو، دوباره فعال شده است</small>':''}</div><button class="text-btn ${pmt.voidedAt?'':'danger'}" data-action="${pmt.voidedAt?'restore-payment':'remove-payment'}" data-customer="${esc(c.id)}" data-policy="${esc(p.id)}" data-id="${esc(pmt.id)}">${pmt.voidedAt?'برگرداندن':'لغو ثبت'}</button></li>`).join('')}</ul>`:'<p class="empty-inline">هنوز پرداختی ثبت نشده است.</p>'}</details></section>`;
 }
 function emptyBlock(ico,title,text,action=''){return `<div class="empty-state"><span>${icon(ico)}</span><h3>${title}</h3><p>${text}</p>${action}</div>`;}
-function backupView(){return cloudPanel()+heading('دفترتان را نگه دارید','پشتیبان و تنظیمات','یک نسخه از دفتر بگیرید تا در دستگاه دیگری هم بتوانید آن را باز کنید.')+`<div class="backup-grid"><section class="panel backup-card"><span class="big-icon">${icon('backup')}</span><h2>دریافت فایل پشتیبان</h2><p>همه مشتریان، بیمه‌نامه‌ها و پرداخت‌ها در یک فایل ذخیره می‌شوند.</p><div class="backup-meta">${money(data.customers.length)} مشتری · واحد ${currency()}${mode==='demo'?' · اطلاعات نمونه':''}</div>${button('دریافت پشتیبان','export','primary','backup')}<small id="last-backup">${lastBackup()}</small></section><section class="panel backup-card"><span class="big-icon sand">${icon('file')}</span><h2>بازگرداندن پشتیبان</h2><p>فایل دفتر قبلی را انتخاب کنید. پیش از جایگزینی، خلاصه آن را می‌بینید.</p><div class="backup-meta">فقط فایل JSON ساخته‌شده در این برنامه</div>${button('انتخاب فایل پشتیبان','import','secondary','file')}<input type="file" accept=".json,application/json" id="import-file" hidden></section></div>
+function backupView(){return cloudPanel()+`<section class="panel settings-card"><h2>بررسی اتصال و نسخه</h2><p>مشخصات نسخهٔ برنامه را بدون ورود به حساب بررسی کنید.</p>${button('جزئیات اتصال','connection-details','secondary','info')}</section>`+heading('دفترتان را نگه دارید','پشتیبان و تنظیمات','یک نسخه از دفتر بگیرید تا در دستگاه دیگری هم بتوانید آن را باز کنید.')+`<div class="backup-grid"><section class="panel backup-card"><span class="big-icon">${icon('backup')}</span><h2>دریافت فایل پشتیبان</h2><p>همه مشتریان، بیمه‌نامه‌ها و پرداخت‌ها در یک فایل ذخیره می‌شوند.</p><div class="backup-meta">${money(data.customers.length)} مشتری · واحد ${currency()}${mode==='demo'?' · اطلاعات نمونه':''}</div>${button('دریافت پشتیبان','export','primary','backup')}<small id="last-backup">${lastBackup()}</small></section><section class="panel backup-card"><span class="big-icon sand">${icon('file')}</span><h2>بازگرداندن پشتیبان</h2><p>فایل دفتر قبلی را انتخاب کنید. پیش از جایگزینی، خلاصه آن را می‌بینید.</p><div class="backup-meta">فقط فایل JSON ساخته‌شده در این برنامه</div>${button('انتخاب فایل پشتیبان','import','secondary','file')}<input type="file" accept=".json,application/json" id="import-file" hidden></section></div>
   <section class="panel settings-card"><h2>دفتر فعلی</h2><dl><div><dt>نوع دفتر</dt><dd>${mode==='demo'?'نمونه (اطلاعات ساختگی)':'دفتر شخصی'}</dd></div><div><dt>واحد پول</dt><dd>${currency()} <small>بدون تبدیل خودکار واحد</small></dd></div><div><dt>آمادگی آفلاین</dt><dd id="offline-setting">${esc(offlineDescription())}</dd></div><div><dt>محل نگهداری</dt><dd>${mode==='own'&&data.cloud?'روی این دستگاه و دفتر آنلاین خصوصی؛ وضعیت همگام‌سازی را بررسی کنید.':'مرورگر همین دستگاه؛ اتصال آنلاین هنوز انجام نشده است.'}</dd></div></dl><div class="settings-actions">${offlineActions()}${mode==='demo'?button('شروع دفتر شخصی','setup','secondary','book'):button('تمرین در دفتر نمونه','demo','secondary','book')}${mode==='own'&&!data.customers.length?button('انتخاب دوباره واحد پول','currency','secondary','edit'):''}${button('راهنمای ساده','help','light','help')}</div></section><div class="backup-reminder">${icon('info')}پاک کردن داده‌های مرورگر یا استفاده از مرورگر خصوصی می‌تواند دفتر را از بین ببرد. پس از ثبت حساب‌ها پشتیبان بگیرید؛ فایل پشتیبان حاوی اطلاعات مشتریان است و باید نزد خودتان بماند.</div>`;}
 function lastBackup(){try{const d=localStorage.getItem('daftar.backup.'+mode);return d?'آخرین فایل آماده‌شده: '+dateLabel(d):'پیشنهاد: پس از هر روز کاری پشتیبان بگیرید.';}catch{return '';}}
 function recoveryView(){return `<section class="panel backup-card"><h1>اطلاعات دفتر قابل خواندن نیست</h1><p>برای جلوگیری از از دست رفتن اطلاعات، هیچ تغییری در دفتر ذخیره‌شده نداده‌ایم. فایل فعلی را برای بررسی دریافت کنید یا پشتیبان سالم را بازگردانید.</p>${button('دریافت اطلاعات فعلی','export-raw','secondary','backup')}${button('بازگرداندن پشتیبان سالم','import','primary','file')}<input type="file" accept=".json,application/json" id="import-file" hidden></section>`;}
@@ -236,15 +252,15 @@ async function checkOffline(){
   if(offlineBusy)return;
   offlineBusy=true;offlineIssue=false;offlineMessage='در حال دریافت نسخه آفلاین…';updateConnection();
   try{
-    await prepareOffline({serviceWorker:navigator.serviceWorker,secure:window.isSecureContext,onProgress:message=>{offlineMessage=message;updateConnection();}});
-    offlineReady=true;offlineDetail='';
+    const ready=await prepareOffline({serviceWorker:navigator.serviceWorker,secure:window.isSecureContext,onProgress:message=>{offlineMessage=message;updateConnection();}});
+    preparedCache=ready.version;offlineReady=true;offlineDetail='';
   }catch(error){
     offlineReady=false;offlineIssue=true;offlineDetail=error.detail||error.message;
     offlineMessage=/[\u0600-\u06ff]/.test(error.message)?error.message:'مرورگر نتوانست نسخه آفلاین را دریافت کند. لینک را مستقیم در مرورگر باز کنید و دوباره تلاش کنید.';
     console.warn('Daftar offline setup:',error.message);
   }finally{offlineBusy=false;updateConnection();}
 }
-document.addEventListener('click',e=>{const action=e.target.closest('[data-action]')?.dataset.action;if(action==='offline-help')showOfflineHelp();if(action==='retry-offline'){closeDialog();checkOffline();}});
+document.addEventListener('click',e=>{const action=e.target.closest('[data-action]')?.dataset.action;if(action==='connection-details')showConnectionDetails();if(action==='offline-help')showOfflineHelp();if(action==='retry-offline'){closeDialog();checkOffline();}});
 
 function readDrafts(){try{const d=JSON.parse(localStorage.getItem('daftar.drafts.'+mode)||'{}');return d&&typeof d==='object'&&!Array.isArray(d)?d:{};}catch{return {};}}
 function validDraft(d){
@@ -295,7 +311,7 @@ function cloudPanel(){
   const conflicts=Object.entries(data.cloud?.conflicts||{});
   return `<section class="panel settings-card cloud-card"><h2>اتصال آنلاین دفتر</h2><p>${data.cloud?esc(cloudMessage()):'راه‌اندازی فقط یک بار روی هر دستگاه انجام می‌شود. دفتر نمونه هرگز ارسال نمی‌شود.'}</p>${data.cloud?button('همگام‌سازی اکنون','cloud-sync','secondary','clock'):button(sync.remote.session()?'بررسی اتصال دفتر':'ورود اولیه دستگاه','cloud-connect','secondary','shield')}${sync.status==='error'?button('تمدید ورود دستگاه','cloud-login','secondary','shield'):''}<p>بررسی آنلاین هنگام بازگشت به صفحه، اتصال دوباره اینترنت، ذخیره تغییر و زدن دکمه همگام‌سازی انجام می‌شود. فایل پشتیبان را همچنان نگه دارید.</p>${conflicts.map(([id,c])=>`<div class="alert"><p>اختلاف در پرونده ${esc(c.local?.name||c.remote?.name||'مشتری')}؛ هیچ‌کدام از دو نسخه حذف نشده است.</p>${button('مقایسه دو نسخه','cloud-conflict','secondary','file',`data-id="${esc(id)}"`)}</div>`).join('')}</section>`;
 }
-function cloudLogin(){openDialog(`${modalTitle('ورود اولیه دستگاه','ایمیل و رمز حساب اختصاصی دفتر را وارد کنید. پس از ورود، دستگاه دسترسی را نگه می‌دارد؛ رمز ذخیره نمی‌شود.')}<form id="cloud-login-form"><label>ایمیل<input name="email" type="email" autocomplete="username" dir="ltr" required></label><label>رمز عبور<input name="password" type="password" autocomplete="current-password" dir="ltr" required></label><p>ورود به معنی تأیید نگه داشتن دسترسی همین دستگاه است. از دستگاه شخصی استفاده کنید.</p><div class="form-error" id="form-error" role="alert"></div><div id="firebase-connection-test" hidden><button class="btn secondary" data-action="cloud-diagnose" type="button">بررسی اتصال Firebase بدون رمز</button><p id="firebase-test-result" role="status" aria-live="polite"></p></div><div class="form-actions"><button type="submit" class="btn primary">ورود و نگه داشتن دسترسی دستگاه</button></div></form>`);}
+function cloudLogin(){openDialog(`${modalTitle('ورود اولیه دستگاه','ایمیل و رمز حساب اختصاصی دفتر را وارد کنید. پس از ورود، دستگاه دسترسی را نگه می‌دارد؛ رمز ذخیره نمی‌شود.')}<form id="cloud-login-form"><button type="button" class="btn light" data-action="connection-details">جزئیات اتصال</button><label>ایمیل<input name="email" type="email" autocomplete="username" dir="ltr" required></label><label>رمز عبور<input name="password" type="password" autocomplete="current-password" dir="ltr" required></label><p>ورود به معنی تأیید نگه داشتن دسترسی همین دستگاه است. از دستگاه شخصی استفاده کنید.</p><div class="form-error" id="form-error" role="alert"></div><div id="firebase-connection-test" hidden><button class="btn secondary" data-action="cloud-diagnose" type="button">بررسی اتصال Firebase بدون رمز</button><p id="firebase-test-result" role="status" aria-live="polite"></p></div><div class="form-actions"><button type="submit" class="btn primary">ورود و نگه داشتن دسترسی دستگاه</button></div></form>`);}
 async function cloudPreview(){
   if(!sync.remote.session()){cloudLogin();return;}
   const preview=await sync.preview();
@@ -344,7 +360,7 @@ document.addEventListener('click',async event=>{
 });
 document.addEventListener('submit',async event=>{
   const form=event.target;if(form.id!=='cloud-login-form')return;
-  event.preventDefault();const submitButton=form.querySelector('button');submitButton.disabled=true;
+  event.preventDefault();const submitButton=form.querySelector('button[type="submit"]');submitButton.disabled=true;
   const email=form.elements.email.value, password=form.elements.password.value;
   try {await sync.signIn(email.trim(),password);}
   catch(error){
@@ -372,4 +388,5 @@ $('#dialog').addEventListener('cancel',()=>saveDraft($('#dialog form')));
 $('#dialog').addEventListener('close',()=>{if(!corrupt)render();});
 window.addEventListener('pagehide',()=>{if($('#dialog').open)saveDraft($('#dialog form'));});
 render();checkClock();checkOffline();scheduleSync();
+
 
