@@ -1,4 +1,7 @@
 import {FIREBASE,LEDGER_UID} from './firebase-config.js';
+// Keep beside the implementation so diagnostics identify the loaded module.
+// Update this identifier whenever the authentication transport changes.
+export const FIREBASE_CLIENT_VERSION='safari-fetch-receiver-v1';
 import {validateLedger} from './core.js';
 const AUTH_KEY='daftar.firebase.session.v1';
 export class CloudError extends Error {
@@ -132,3 +135,4 @@ export class FirebaseRest {
   }
   async get(id,currency) {this.reads++;return this.decode(await this.firestore('/customers/'+encodeURIComponent(id)),currency);}
 }
+
