@@ -21,36 +21,49 @@ const out=path.resolve(process.env.BROWSER_EVIDENCE_DIR||path.join(root,'browser
  const base='http://127.0.0.1:'+server.address().port+'/';
  const core=await import(root+'/dist/core.js');
  const model=await import(root+'/dist/sync-model.js');
- const {LEDGER_UID}=await import(root+'/dist/firebase-config.js');
+ const {LEDGER_UID,LEDGER_AUTH_UIDS}=await import(root+'/dist/firebase-config.js');
  const customer={id:'browser-customer',name:'مشتری آزمایشی',phone:'',notes:'',policies:[core.makePolicy({title:'بیمه آزمایشی',number:'TEST',total:'1000000',down:'0',paymentDate:'1405/01/01',firstDate:'1405/02/15',count:'3',frequency:'monthly'})]};
  const initial=model.initializeCloud({...core.emptyLedger('toman'),customers:[customer],revision:'initial-business',updatedAt:'2026-11-07T10:00:00Z'},LEDGER_UID);
- let remote=structuredClone(customer),version=1,puts=0,refreshes=0;
+ let remote=structuredClone(customer),version=1,puts=0,refreshes=0,signins=0;
  const versionTime=()=>`2026-11-07T12:00:${String(version).padStart(2,'0')}Z`;
  const document=()=>({name:`projects/mock/databases/(default)/documents/ledgers/${LEDGER_UID}/customers/${customer.id}`,fields:{payload:{stringValue:JSON.stringify(remote)},operation:{stringValue:'browser-test'}},updateTime:versionTime()});
  const browser=await chromium.launch({...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE}:{}),headless:true,args:['--no-sandbox']});
  const errors=[];
- const context=async()=>{
+ const context=async(authUid,seedSession)=>{
   const c=await browser.newContext({viewport:{width:360,height:660},acceptDownloads:true});
+  await c.route('https://identitytoolkit.googleapis.com/**',route=>{
+   signins++;
+   return route.fulfill({status:200,json:{localId:authUid,idToken:'mock-'+authUid,refreshToken:'mock-refresh',expiresIn:'0'}});
+  });
   await c.route('https://firestore.googleapis.com/**',async route=>{
    const req=route.request(),url=new URL(req.url());let body;
+   assert.equal(req.headers().authorization,'Bearer mock-refreshed-'+authUid);
    if(req.method()==='POST'){
     const w=req.postDataJSON().writes[0];
+    assert.ok(w.update.name.includes('/ledgers/'+LEDGER_UID+'/customers/'));
     if(w.currentDocument.updateTime!==versionTime())return route.fulfill({status:412,json:{error:{status:'FAILED_PRECONDITION'}}});
     remote=JSON.parse(w.update.fields.payload.stringValue);version++;puts++;body={commitTime:versionTime()};
-   }else if(url.pathname.endsWith('/customers'))body={documents:[document()]};
+   }else if(url.pathname.endsWith('/customers')){assert.ok(url.pathname.includes('/ledgers/'+LEDGER_UID+'/'));body={documents:[document()]};}
    else if(url.pathname.endsWith('/'+customer.id))body=document();
    else body={fields:{schemaVersion:{integerValue:'2'},currency:{stringValue:'toman'}},updateTime:'2026-11-07T10:00:00Z'};
    await route.fulfill({status:200,json:body});
   });
-  await c.route('https://securetoken.googleapis.com/**',route=>{refreshes++;return route.fulfill({status:200,json:{user_id:LEDGER_UID,id_token:'mock-refreshed',refresh_token:'mock-refresh',expires_in:'3600'}});});
-  await c.addInitScript(({initial,owner})=>{
+  await c.route('https://securetoken.googleapis.com/**',route=>{refreshes++;return route.fulfill({status:200,json:{user_id:authUid,id_token:'mock-refreshed-'+authUid,refresh_token:'mock-refresh',expires_in:'3600'}});});
+  await c.addInitScript(({initial,owner,seedSession})=>{
    if(!localStorage.getItem('daftar.ledger.v1')){
     localStorage.setItem('daftar.ledger.v1',JSON.stringify(initial));localStorage.setItem('daftar.mode.v1','own');
-    localStorage.setItem('daftar.firebase.session.v1',JSON.stringify({owner,idToken:'mock-expired',refreshToken:'mock-refresh',expiresAt:0}));
+    if(seedSession)localStorage.setItem('daftar.firebase.session.v1',JSON.stringify({owner,idToken:'mock-expired',refreshToken:'mock-refresh',expiresAt:0}));
    }
-  },{initial,owner:LEDGER_UID});
+  },{initial,owner:LEDGER_UID,seedSession});
   const p=await c.newPage();p.on('pageerror',e=>errors.push(e.message));
   await p.goto(base);
+  if(!seedSession){
+   await p.locator('.mobile-nav [data-view="backup"]').click();
+   await p.locator('[data-action="cloud-login"]').click();
+   await p.locator('#cloud-login-form [name="email"]').fill('dad@example.invalid');
+   await p.locator('#cloud-login-form [name="password"]').fill('fictional-password');
+   await p.locator('#cloud-login-form button[type="submit"]').click();
+  }
   await p.waitForFunction(()=>JSON.parse(localStorage.getItem('daftar.ledger.v1')).cloud.confirmedAt);
   return {c,p};
  };
@@ -67,7 +80,9 @@ const out=path.resolve(process.env.BROWSER_EVIDENCE_DIR||path.join(root,'browser
   await p.locator('#payment-form button[type="submit"]').click();
   await p.waitForFunction(()=>!document.querySelector('#dialog').open);
  };
- const a=await context(),b=await context();
+ const a=await context(LEDGER_UID,true),b=await context(LEDGER_AUTH_UIDS.find(uid=>uid!==LEDGER_UID),false);
+ assert.equal(signins,1);
+ assert.equal(await b.p.evaluate(()=>JSON.parse(localStorage.getItem('daftar.firebase.session.v1')).owner),LEDGER_UID);
  await nav(a.p,'backup');await nav(b.p,'backup');
  assert.equal(await a.p.locator('.cloud-status').count(),1);
  assert.equal(await a.p.locator('[data-action="cloud-settings"]').count(),0);
@@ -83,7 +98,7 @@ const out=path.resolve(process.env.BROWSER_EVIDENCE_DIR||path.join(root,'browser
  await sync(b.p);assert.equal(core.policySummary((await read(b.p)).customers[0].policies[0]).paid,100000);
  await a.p.reload();await a.p.waitForFunction(()=>document.querySelector('#app').textContent.includes('دفتر'));
  assert.equal(await a.p.locator('#cloud-login-form').count(),0);
- assert.equal(await a.p.evaluate(()=>JSON.parse(localStorage.getItem('daftar.firebase.session.v1')).idToken),'mock-refreshed');
+ assert.equal(await a.p.evaluate(()=>JSON.parse(localStorage.getItem('daftar.firebase.session.v1')).idToken),'mock-refreshed-'+LEDGER_UID);
  await b.p.waitForFunction(()=>document.querySelector('#connection').textContent.includes('آماده استفاده آفلاین'));
  await b.c.setOffline(true);await pay(b.p,'200000');
  assert.ok(Object.keys((await read(b.p)).cloud.pending).length>0);
@@ -103,6 +118,7 @@ const out=path.resolve(process.env.BROWSER_EVIDENCE_DIR||path.join(root,'browser
  }
  await a.p.screenshot({path:out+'/backup-desktop.png',fullPage:true});
  assert.deepEqual(errors,[]);
- const result={result:'PASS',transport:'intercepted Firebase REST; no production login or writes',contexts:2,puts,refreshes,paid:300000,receipts:2,layouts,checks:['backup freshness after no-change sync','online payment exchange','expired-token renewal','access retained after reload','offline payment survives offline reload','reconnect convergence with stable receipts','single sync message on backup screen','no horizontal overflow'],limits:['physical Safari/Galaxy A20 and real-account two-device production acceptance NOT CHECKED']};
+ const result={result:'PASS',transport:'intercepted Firebase REST; no production login or writes',contexts:2,signins,puts,refreshes,paid:300000,receipts:2,layouts,checks:['two distinct authorized accounts share the original ledger','dad sign-in through the actual form','legacy owner session retained','backup freshness after no-change sync','online payment exchange','expired-token renewal','access retained after reload','offline payment survives offline reload','reconnect convergence with stable receipts','single sync message on backup screen','no horizontal overflow'],limits:['physical Safari/Galaxy A20 and real-account two-device production acceptance NOT CHECKED']};
  await fs.writeFile(out+'/browser-result.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result));await browser.close();await new Promise(resolve=>server.close(resolve));
 })().catch(e=>{console.error(e);process.exit(1)});
+

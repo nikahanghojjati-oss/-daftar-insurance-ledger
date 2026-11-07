@@ -8,6 +8,7 @@ import {readFile} from 'node:fs/promises';
 import {initializeTestEnvironment,assertSucceeds,assertFails} from '@firebase/rules-unit-testing';
 import {doc,setDoc,getDoc,getDocs,collection,deleteDoc} from 'firebase/firestore';
 const owner='i6VYpbhc1Iaf0qNjILLRnwhvISR2';
+const dad='OrAHVtSfEGXWBSqswGdr74O3CO62';
 const env=await initializeTestEnvironment({projectId:'demo-daftar',firestore:{rules:await readFile('firestore.sync.rules','utf8')}});
 const path=`ledgers/${owner}`;
 const good={payload:'{"id":"fictional"}',operation:'fictional-operation'};
@@ -61,4 +62,30 @@ try {
    await assert.rejects(a.remote.put(old.value,old.updateTime,'stale'),e=>e.code==='FAILED_PRECONDITION'||[409,412].includes(e.status));
    const writes=a.remote.writes;await a.engine.run();assert.equal(a.remote.writes,writes);assert.equal(policySummary(a.data.customers[0].policies[0]).paid,300000);
  });
+ await test('dad and original account share existing receipts; dad cannot create another ledger or delete records',async()=>{
+   const father=env.authenticatedContext(dad).firestore(),mine=env.authenticatedContext(owner).firestore();
+   const p=path+'/customers/fictional';
+   const before=await assertSucceeds(getDoc(doc(father,p)));
+   const customer=JSON.parse(before.data().payload);
+   assert.equal(policySummary(customer.policies[0]).paid,300000);
+   const priorIds=customer.policies[0].payments.map(p=>p.id).sort();
+   customer.policies[0]=recordPayment(customer.policies[0],{id:'dad-receipt',amount:'50000',date:'1405/01/03',note:''});
+   await assertSucceeds(setDoc(doc(father,p),{payload:JSON.stringify(customer),operation:'dad-test'}));
+   const after=JSON.parse((await assertSucceeds(getDoc(doc(mine,p)))).data().payload);
+   assert.equal(policySummary(after.policies[0]).paid,350000);
+   assert.deepEqual(after.policies[0].payments.map(p=>p.id).sort(),[...priorIds,'dad-receipt'].sort());
+   await assertSucceeds(getDocs(collection(father,path+'/customers')));
+   for(const otherPath of ['ledgers/'+dad,'ledgers/unrelated']){
+     await assertFails(getDoc(doc(father,otherPath)));
+     await assertFails(setDoc(doc(father,otherPath),{currency:'toman',schemaVersion:2}));
+     await assertFails(setDoc(doc(father,otherPath+'/customers/fictional'),good));
+   }
+   await assertFails(deleteDoc(doc(father,p)));
+   await assertFails(deleteDoc(doc(father,path)));
+   await assertFails(setDoc(doc(father,path),{currency:'rial',schemaVersion:2}));
+   await assertFails(getDocs(collection(father,'ledgers')));
+   await assertFails(setDoc(doc(father,p),{payload:15,operation:'invalid'}));
+   await assertFails(setDoc(doc(father,'unrelated/customer'),good));
+ });
 } finally {await env.cleanup();}
+

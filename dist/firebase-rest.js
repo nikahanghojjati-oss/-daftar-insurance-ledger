@@ -1,4 +1,4 @@
-import {FIREBASE,LEDGER_UID} from './firebase-config.js';
+import {FIREBASE,LEDGER_UID,LEDGER_AUTH_UIDS} from './firebase-config.js';
 import {validateLedger} from './core.js';
 const AUTH_KEY='daftar.firebase.session.v1';
 export class CloudError extends Error {
@@ -8,7 +8,7 @@ export class CloudError extends Error {
 // bodies, the typed password, tokens or an email address into the interface.
 export function explainLoginFailure(error) {
   const code=String(error?.code||'').split(':')[0].trim().toUpperCase();
-  if(code==='WRONG_LEDGER_ACCOUNT')return 'ایمیل و رمز پذیرفته شدند، اما این حساب، حساب اختصاصی این دفتر نیست. مدیر دفتر باید ایمیل کاربر اصلی را در Firebase Authentication ← Users بررسی کند. حساب تازه نسازید.';
+  if(code==='WRONG_LEDGER_ACCOUNT')return 'ایمیل و رمز پذیرفته شدند، اما این حساب اجازه ورود به این دفتر را ندارد. مدیر دفتر باید حساب اختصاصی مجاز را در Firebase Authentication ← Users بررسی کند. ساخت حساب تازه به‌تنهایی دسترسی نمی‌دهد.';
   if(['INVALID_LOGIN_CREDENTIALS','EMAIL_NOT_FOUND','INVALID_PASSWORD','INVALID_EMAIL','USER_NOT_FOUND'].includes(code))return 'ایمیل یا رمز حساب اختصاصی دفتر پذیرفته نشد. ایمیل را دقیقاً با حساب موجود در Firebase Authentication ← Users مقایسه کنید. رمز Gmail یا ورود به کنسول Firebase، رمز این حساب نیست. [INVALID_LOGIN_CREDENTIALS]';
   if(code==='USER_DISABLED')return 'این حساب در Firebase غیرفعال شده است؛ مدیر دفتر باید آن را در Authentication ← Users بررسی کند. [USER_DISABLED]';
   if(code==='OPERATION_NOT_ALLOWED')return 'ورود با ایمیل و رمز در این پروژه Firebase فعال نیست؛ مدیر دفتر باید آن را در Authentication ← Sign-in method بررسی کند. [OPERATION_NOT_ALLOWED]';
@@ -28,7 +28,16 @@ export class FirebaseRest {
     Object.assign(this,{fetcher,storage,config,owner});this.requests=0;this.reads=0;this.writes=0;this.refreshing=null;
     this.root=`https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/(default)/documents/ledgers/${owner}`;
   }
-  session() {try {const s=JSON.parse(this.storage.getItem(AUTH_KEY));return s?.owner===this.owner && typeof s.refreshToken==='string' ? s : null;} catch {return null;} }
+  session() {
+    try {
+      const s=JSON.parse(this.storage.getItem(AUTH_KEY));
+      // Legacy sessions belonged to the original account. Keep them valid
+      // without rewriting the ledger, pending queue or receipt identifiers.
+      const authUid=s?.authUid===undefined?s?.owner:s.authUid;
+      return s?.owner===this.owner && LEDGER_AUTH_UIDS.includes(authUid) && typeof s.refreshToken==='string'
+        ? {...s,authUid} : null;
+    } catch {return null;}
+  }
   async request(url,options={}) {
     if(++this.requests>1500)throw new CloudError(429,'SESSION_LIMIT');
     const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),15000);
@@ -58,22 +67,23 @@ export class FirebaseRest {
   }
   async signIn(email,password) {
     const result=await this.request(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${encodeURIComponent(this.config.apiKey)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password,returnSecureToken:true})});
-    if(result.localId!==this.owner)throw new CloudError(403,'WRONG_LEDGER_ACCOUNT');
-    try {this.saveSession(result.idToken,result.refreshToken,result.expiresIn);}
+    if(!LEDGER_AUTH_UIDS.includes(result.localId))throw new CloudError(403,'WRONG_LEDGER_ACCOUNT');
+    try {this.saveSession(result.idToken,result.refreshToken,result.expiresIn,result.localId);}
     catch(error){if(error instanceof CloudError)throw error;throw new CloudError(0,'STORAGE_UNAVAILABLE');}
     return true;
   }
-  saveSession(idToken,refreshToken,expiresIn) {
+  saveSession(idToken,refreshToken,expiresIn,authUid=this.owner) {
     if(!idToken||!refreshToken)throw new CloudError(401,'INVALID_SESSION');
-    this.storage.setItem(AUTH_KEY,JSON.stringify({owner:this.owner,idToken,refreshToken,expiresAt:Date.now()+Number(expiresIn)*1000-60000}));
+    if(!LEDGER_AUTH_UIDS.includes(authUid))throw new CloudError(403,'WRONG_LEDGER_ACCOUNT');
+    this.storage.setItem(AUTH_KEY,JSON.stringify({owner:this.owner,authUid,idToken,refreshToken,expiresAt:Date.now()+Number(expiresIn)*1000-60000}));
   }
   async token() {
     const current=this.session();if(!current)throw new CloudError(401,'SIGN_IN_REQUIRED');
     if(current.idToken && current.expiresAt>Date.now())return current.idToken;
     if(!this.refreshing)this.refreshing=(async()=>{
       const r=await this.request(`https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(this.config.apiKey)}`,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'refresh_token',refresh_token:current.refreshToken}).toString()});
-      if(r.user_id!==this.owner)throw new CloudError(403,'WRONG_LEDGER_ACCOUNT');
-      this.saveSession(r.id_token,r.refresh_token,r.expires_in);return r.id_token;
+      if(r.user_id!==current.authUid || !LEDGER_AUTH_UIDS.includes(r.user_id))throw new CloudError(403,'WRONG_LEDGER_ACCOUNT');
+      this.saveSession(r.id_token,r.refresh_token,r.expires_in,r.user_id);return r.id_token;
     })().finally(()=>this.refreshing=null);
     return this.refreshing;
   }
@@ -132,3 +142,4 @@ export class FirebaseRest {
   }
   async get(id,currency) {this.reads++;return this.decode(await this.firestore('/customers/'+encodeURIComponent(id)),currency);}
 }
+

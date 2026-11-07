@@ -1,5 +1,13 @@
 # Validation — 2026-11-01
 
+## Shared account access candidate — November 7, 2026
+
+Two allowlisted accounts use the original ledger path. No customer migration, ledger/schema rewrite, payment calculation change, browser-storage reset or production record operation is part of this update. Old sessions infer the original auth identity; new sessions persist authUid separately and reject identity changes during renewal. Rules retain immutable metadata, bounded envelopes, no hard deletes and deny other users/paths.
+
+Local checks: 78/78 Node tests pass, including five shared-access regressions. Syntax checks pass for the updated client, browser scenario and emulator tests. Local Chromium was attempted but the executor refused its singleton socket (`Operation not permitted`); browser acceptance must run in CI. No physical-device or production-account sign-in has been performed.
+
+CI browser and rule-emulator results, code publication and manual Firebase rule publication are pending. The emulator test adds an actual authenticated father's read/write of the existing customer's receipts and checks prohibited separate-ledger paths, deletes and metadata changes. The browser script now signs in a second synthetic authorized identity through the actual form and retains the legacy original-account session, while repeating offline payment/reload/convergence and backup freshness checks. All fixtures are fictional; mocked browser transport and emulator results do not prove real-device production acceptance.
+
 ## Automated
 
 The initial 12 passing Node tests:
@@ -140,3 +148,4 @@ Local Chromium could not launch because the executor refused its Unix socket; sh
 A local CPU comparison of portable business content with ten fictional receipts per customer preserved revisions at 100/500/1,000 customers. Serialized ledgers were about 143/717/1,435 KB; single comparison observations were 14/37/50 ms on this executor. These are diagnostic observations, not benchmarks on the father's phone and not proof of faster overall sync.
 
 Still NOT CHECKED: real-account login/persistence and expired-token renewal on the actual Safari/Android devices; production A-to-B and B-to-A payment exchange; physical-device offline recovery. The owner's screenshot establishes one displayed successful online check only. Cloud UI timestamps remain historical checks, not a claim that every device is current.
+

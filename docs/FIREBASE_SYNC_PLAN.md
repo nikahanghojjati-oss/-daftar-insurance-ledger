@@ -1,5 +1,9 @@
 # Firebase sync implementation gate — دفتر
 
+## Current decision — November 7, 2026
+
+The historical setup and proposed private-link text below are superseded. The app uses persistent Email/Password REST authentication without credential-bearing links, plus local-first synchronization to the existing Firebase ledger. Two exact approved accounts will share that same ledger after the access update and manual rule publication. Account identity must never select a different customer collection. See the latest HANDOFF.md and VALIDATION.md for tested and published status. Real-device production acceptance remains separate from browser/emulator evidence.
+
 ## Current release status
 The personal ledger is still browser-local. The existing Firebase project ID is `daftar-insurance-ledger`, but its Spark plan, Firestore database, Authentication settings and web-app configuration have not been verified. Do not turn on a sync badge, upload real records, or claim cross-device consistency until the two-device acceptance test passes. Keep JSON export/restore available regardless.
 
@@ -25,3 +29,4 @@ An anonymous Firebase account on each device cannot establish a shared ledger by
 Firestore Standard's free quota applies to one database **per project**: 50,000 document reads and 20,000 writes per day. A customer-list bootstrap of 200 customer documents costs roughly 200 reads; ten opens cost roughly 2,000 reads. One customer edit should cost about one current-document read plus one write, with extra reads only on conflicts/retries. One live listener should be used instead of minute polling. Set a client-side session ceiling and inspect the Firebase Usage dashboard during the two-device test. Google bills no extra usage on Spark, but hitting its quota can stop operations for the day. Avoid paid backup/PITR/TTL features; JSON downloads remain the independent backup.
 
 Official references: https://firebase.google.com/docs/firestore/quotas ; https://firebase.google.com/docs/firestore/manage-data/enable-offline ; https://firebase.google.com/docs/firestore/security/get-started ; https://firebase.google.com/docs/auth/web/anonymous-auth
+

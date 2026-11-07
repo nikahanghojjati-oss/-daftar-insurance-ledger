@@ -3,8 +3,8 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function owner(ledger) {
       return request.auth != null
-        && request.auth.uid == 'i6VYpbhc1Iaf0qNjILLRnwhvISR2'
-        && ledger == request.auth.uid;
+        && request.auth.uid in ['i6VYpbhc1Iaf0qNjILLRnwhvISR2', 'OrAHVtSfEGXWBSqswGdr74O3CO62']
+        && ledger == 'i6VYpbhc1Iaf0qNjILLRnwhvISR2';
     }
     match /ledgers/{ledger} {
       allow get: if owner(ledger);
@@ -29,3 +29,4 @@ service cloud.firestore {
     match /{document=**} { allow read, write: if false; }
   }
 }
+
