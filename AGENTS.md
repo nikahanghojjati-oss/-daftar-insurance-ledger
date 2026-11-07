@@ -14,14 +14,16 @@ Read README.md, docs/HANDOFF.md and VALIDATION.md before editing.
 - A beginner-friendly insurance customer ledger: search, profiles, policies, weekly/monthly installments, actual payments, paid/owed totals and remaining dates.
 - Keep the fictional demo ledger separate from the personal ledger.
 - Preserve payment IDs, cancellation audit history, schema-1 imports, schema-2 backups and unfinished-form recovery.
-- The current implementation is browser-local. An opt-in cloud sync client and emulator-tested candidate rules are implemented; owner-approved UID-scoped production rules are published; live account sign-in and two-device acceptance are still pending. Read docs/FIREBASE_SYNC_PLAN.md before touching Firebase.
+- The current implementation is local-first with optional Firebase REST sync and owner-approved UID-scoped production rules. A phone screenshot records one successful online check; retained access and two-physical-device production acceptance remain unverified. Read docs/FIREBASE_SYNC_PLAN.md before touching Firebase.
 - Owner wants a dedicated GitHub repository and GitHub Pages, publicly accessible without ChatGPT sign-in.
-- Firebase project `daftar-insurance-ledger` was created in the owner's console; database/auth/hosting configuration is unverified. Do not treat it as deployed sync.
+- Firebase project `daftar-insurance-ledger` is separate from the football project. Source configuration and historical activation are documented; do not infer current device acceptance from them.
 - Keep Firebase Spark-only, with billing unlinked. Do not upgrade or add chargeable services.
 - No recurring Google/ChatGPT login for the father. Agree on a simple persistent device-access or private-link design before adding cloud access.
 - Never publish real customer records, exported ledgers, passwords or service-account keys to GitHub.
 
-## Development and collaboration
+## Development and ownership
+
+The owner superseded the two-GPT split on November 7, 2026. Sol owns the entire backlog. Do not delegate, spawn helpers or request another GPT to perform a work lane. See docs/WORK_PLAN.md.
 - Node built-in tests; no runtime npm packages or build step. `npm test` and `node --check dist/app.js`.
 - Static public application files live in `dist/` and the Pages workflow uploads that directory.
 - Keep all assets local and all asset URLs relative so `/repository-name/` hosting works offline.

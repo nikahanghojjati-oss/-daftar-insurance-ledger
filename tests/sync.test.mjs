@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {emptyLedger,makePolicy,recordPayment,voidPayment,restorePayment,validateLedger,policySummary} from '../dist/core.js';
-import {initializeCloud,queueChanges,reconcile,mergeCustomer,resolveConflict,backupLedger,equal} from '../dist/sync-model.js';
+import {initializeCloud,queueChanges,reconcile,mergeCustomer,resolveConflict,backupLedger,equal,stampBusinessRevision} from '../dist/sync-model.js';
 import {LedgerSync} from '../dist/sync.js';
 import {FirebaseRest,CloudError} from '../dist/firebase-rest.js';
 import {LEDGER_UID} from '../dist/firebase-config.js';
@@ -20,6 +20,40 @@ class Remote {
 }
 function device(remote,data=emptyLedger('toman')){let local=cp(data);let writes=0;let chain=Promise.resolve();const lock=fn=>{const p=chain.then(fn);chain=p.catch(()=>{});return p;};const engine=new LedgerSync({remote,read:()=>cp(local),write:n=>{local=cp(n);writes++;},lock,online:()=>!remote.fail});return {engine,get data(){return cp(local);},set data(n){local=cp(n);},mutate(fn){const before=cp(local),next=cp(local);fn(next);local=queueChanges(before,next);},get writes(){return writes;}};}
 async function connect(d){const p=await d.engine.preview();await d.engine.connect(p);}
+
+test('backup revision survives no-change sync and upload acknowledgement, but changes on a remote receipt',async()=>{
+ const remote=new Remote(ledger());let local=stampBusinessRevision(null,ledger());
+ const engine=new LedgerSync({remote,read:()=>cp(local),write:next=>{local=stampBusinessRevision(local,next);},lock:fn=>fn(),online:()=>true});
+ await engine.connect(await engine.preview());const backed=local.revision,updated=local.updatedAt;
+ await engine.run();await engine.run();
+ assert.equal(local.revision,backed);assert.equal(local.updatedAt,updated);
+ remote.seed(receipt(remote.docs.get('c1').value,'remote-payment'));
+ await engine.run();assert.notEqual(local.revision,backed);
+ assert.equal(policySummary(local.customers[0].policies[0]).paid,100000);
+ const before=cp(local),next=cp(local);next.customers[0]=receipt(next.customers[0],'local-payment');
+ local=stampBusinessRevision(before,queueChanges(before,next));const localRevision=local.revision;
+ await engine.run({full:false});assert.equal(local.revision,localRevision);
+ assert.equal(policySummary(local.customers[0].policies[0]).paid,200000);
+ assert.deepEqual(local.customers[0].policies[0].payments.map(p=>p.id).sort(),['local-payment','remote-payment']);
+});
+test('backup revision includes conflict originals and correction history, not queue metadata',()=>{
+ const before=stampBusinessRevision(null,initializeCloud(ledger(),LEDGER_UID));
+ const transport=cp(before);transport.cloud.pending.c1='retry';transport.cloud.confirmedAt='2026-11-07T12:00:00Z';
+ assert.equal(stampBusinessRevision(before,transport).revision,before.revision);
+ const conflict=cp(before);conflict.cloud.conflicts.c1={local:customer(),remote:{...customer(),name:'نسخه دیگر'},base:customer(),paths:['name']};
+ assert.notEqual(stampBusinessRevision(before,conflict).revision,before.revision);
+ const corrected=cp(before);corrected.customers[0]=receipt(corrected.customers[0],'cancel-me');
+ const saved=stampBusinessRevision(before,corrected),canceled=cp(saved);
+ canceled.customers[0].policies[0]=voidPayment(canceled.customers[0].policies[0],'cancel-me');
+ assert.notEqual(stampBusinessRevision(saved,canceled).revision,saved.revision);
+ assert.equal(canceled.customers[0].policies[0].payments[0].id,'cancel-me');
+});
+test('no-change legacy ledgers keep their legacy backup marker and are not mutated',()=>{
+ const before=ledger();delete before.revision;delete before.updatedAt;const original=cp(before);
+ const next=initializeCloud(before,LEDGER_UID),saved=stampBusinessRevision(before,next);
+ assert.equal(saved.revision,undefined);assert.equal(saved.updatedAt,undefined);assert.deepEqual(before,original);
+ assert.notEqual(stampBusinessRevision(before,{...next,customers:[{...next.customers[0],name:'تغییر'}]}).revision,undefined);
+});
 
 test('two devices: backup-first explicit initial upload, second device downloads, receipts converge',async()=>{
  const remote=new Remote(), a=device(remote,ledger());await connect(a);

@@ -1,0 +1,24 @@
+name: Browser sync and backup acceptance
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - run: npm install --no-save --ignore-scripts playwright@1.62.1
+      - run: npx playwright install --with-deps chromium
+      - run: node scripts/browser-sync.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fictional-browser-evidence
+          path: browser-evidence/
+          retention-days: 7

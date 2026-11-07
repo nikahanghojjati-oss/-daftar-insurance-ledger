@@ -360,3 +360,18 @@ dialog::backdrop{background:#152f4266;backdrop-filter:blur(5px)}
   .modal-head h2{font-size:21px}
   .form-actions{margin-top:15px}
 }
+
+/* Keep the connection task compact; show explanations only when requested. */
+.cloud-card{margin-bottom:24px}
+.cloud-card h2{margin-bottom:12px}
+.cloud-card .cloud-local{display:flex;align-items:center;gap:8px;color:#355b4d;margin:8px 0}
+.cloud-card .cloud-status{color:#304e5b;font-size:15px;line-height:1.9;margin:8px 0 14px}
+.cloud-actions{display:flex;flex-wrap:wrap;gap:10px}
+.cloud-help{margin-top:14px;border-top:1px solid #dde5e2}
+.cloud-help summary{padding:12px 0;font-size:13px;color:#345c56;cursor:pointer}
+.cloud-help p{margin:0 0 8px}
+@media(max-width:400px){
+  .cloud-card{padding:20px;margin-bottom:20px}
+  .cloud-card .cloud-local,.cloud-card .cloud-status{font-size:14px}
+  .cloud-actions .btn{min-height:48px;font-size:14px}
+}

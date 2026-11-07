@@ -122,3 +122,16 @@ export function backupLedger(ledger) {
   if(cloud && Object.keys(cloud.conflicts).length)business.unresolvedSyncConflicts=clone(cloud.conflicts);
   return business;
 }
+
+// Backup freshness tracks portable records and retained history, not transport
+// acknowledgements. Keep old revision-less ledgers compatible as well.
+export function stampBusinessRevision(previous,next) {
+  const content=ledger=>{
+    const {revision,updatedAt,...records}=backupLedger(ledger);
+    return records;
+  };
+  if(previous && equal(content(previous),content(next))) {
+    return {...next,revision:previous.revision,updatedAt:previous.updatedAt};
+  }
+  return {...next,revision:uid(),updatedAt:new Date().toISOString()};
+}

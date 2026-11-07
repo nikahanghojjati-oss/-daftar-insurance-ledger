@@ -1,6 +1,6 @@
 import {prepareOffline} from './offline.js';
 import {verifyClock} from './clock.js';
-import {LedgerSync,withLedgerLock,queueChanges,backupLedger} from './sync.js';
+import {LedgerSync,withLedgerLock,queueChanges,backupLedger,stampBusinessRevision} from './sync.js';
 import {explainLoginFailure} from './firebase-rest.js';
 import {inspectFirebaseConnection} from './connectivity.js';
 import {CURRENCIES,MONTHS,digits,fa,normalize,money,amount,uid,today,addDays,firstInsuranceDue,dateInput,dateLabel,parseDate,makePolicy,reviseSchedule,recordPayment,similarPayments,voidPayment,restorePayment,policySummary,customerSummary,ledgerSummary,dueItems,validateLedger,emptyLedger,demoLedger} from './core.js';
@@ -16,7 +16,7 @@ function ownConnected(){try{return !!readOwn()?.cloud;}catch{return false;}}
 let syncTimer;
 const sync = new LedgerSync({read:readOwn,write:next=>{
   if($('#dialog').open && $('#dialog').querySelector('#customer-form,#policy-form,#payment-form,#schedule-form'))throw Error('FORM_IN_PROGRESS');
-  next.revision=uid();next.updatedAt=new Date().toISOString();
+  next=stampBusinessRevision(readOwn(),next);
   const raw=JSON.stringify(next);localStorage.setItem(STORE.own,raw);
   if(mode==='own'){data=next;baseRaw=raw;}
 },changed:()=>{if(typeof data!=='undefined' && !$('#dialog').open)render();}});
@@ -37,7 +37,7 @@ async function commit(next){
   next=queueChanges(previous,next);
   validateLedger(next);
   if(localStorage.getItem(STORE[mode])!==expectedRaw){reloadData();throw new Error('دفتر در پنجره دیگری تغییر کرده است. اطلاعات تازه شد؛ دوباره تلاش کنید.');}
-  next.revision=uid();next.updatedAt=new Date().toISOString();
+  next=stampBusinessRevision(previous,next);
   const raw=JSON.stringify(next);
   try{localStorage.setItem(STORE[mode],raw);}catch{throw new Error('اطلاعات ذخیره نشد. فضای دستگاه را بررسی کنید و دوباره تلاش کنید.');}
   data=next;baseRaw=raw;
@@ -289,11 +289,11 @@ function cloudMessage(){
   if(data.cloud?.confirmedAt)return 'آنلاین بررسی شد: '+fa(new Date(data.cloud.confirmedAt).toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'}));
   return 'روی دستگاه ذخیره شد؛ هنوز آنلاین تأیید نشده';
 }
-function cloudStrip(){return mode==='own'&&data.cloud?`<div class="save-strip" role="status"><span>${esc(cloudMessage())}</span><button data-action="cloud-settings">بررسی همگام‌سازی</button></div>`:'';}
+function cloudStrip(){return mode==='own'&&data.cloud&&view!=='backup'?`<div class="save-strip" role="status"><span>${esc(cloudMessage())}</span><button data-action="cloud-settings">بررسی همگام‌سازی</button></div>`:'';}
 function cloudPanel(){
   if(mode==='demo')return '';
   const conflicts=Object.entries(data.cloud?.conflicts||{});
-  return `<section class="panel settings-card cloud-card"><h2>اتصال آنلاین دفتر</h2><p>${data.cloud?esc(cloudMessage()):'راه‌اندازی فقط یک بار روی هر دستگاه انجام می‌شود. دفتر نمونه هرگز ارسال نمی‌شود.'}</p>${data.cloud?button('همگام‌سازی اکنون','cloud-sync','secondary','clock'):button(sync.remote.session()?'بررسی اتصال دفتر':'ورود اولیه دستگاه','cloud-connect','secondary','shield')}${sync.status==='error'?button('تمدید ورود دستگاه','cloud-login','secondary','shield'):''}<p>بررسی آنلاین هنگام بازگشت به صفحه، اتصال دوباره اینترنت، ذخیره تغییر و زدن دکمه همگام‌سازی انجام می‌شود. فایل پشتیبان را همچنان نگه دارید.</p>${conflicts.map(([id,c])=>`<div class="alert"><p>اختلاف در پرونده ${esc(c.local?.name||c.remote?.name||'مشتری')}؛ هیچ‌کدام از دو نسخه حذف نشده است.</p>${button('مقایسه دو نسخه','cloud-conflict','secondary','file',`data-id="${esc(id)}"`)}</div>`).join('')}</section>`;
+  return `<section class="panel settings-card cloud-card"><h2>اتصال آنلاین دفتر</h2>${data.cloud?'<p class="cloud-local">'+icon('check')+'حساب‌ها روی این دستگاه ذخیره شده‌اند.</p>':''}<p class="cloud-status" role="status" aria-live="polite">${data.cloud?esc(cloudMessage()):'راه‌اندازی فقط یک بار روی هر دستگاه انجام می‌شود. دفتر نمونه هرگز ارسال نمی‌شود.'}</p><div class="cloud-actions">${data.cloud?button('همگام‌سازی اکنون','cloud-sync','secondary','clock',sync.status==='syncing'?'disabled':''):button(sync.remote.session()?'بررسی اتصال دفتر':'ورود اولیه دستگاه','cloud-connect','secondary','shield')}${sync.status==='error'?button('تمدید ورود دستگاه','cloud-login','secondary','shield'):''}</div><details class="cloud-help"><summary>همگام‌سازی چگونه انجام می‌شود؟</summary><p>زمان بالا، آخرین بررسی موفق است. برای دریافت تغییرات دستگاه دیگر، همگام‌سازی را بزنید یا به برنامه برگردید. بررسی هنگام بازگشت به صفحه، اتصال دوباره اینترنت و ذخیره تغییر نیز انجام می‌شود. فایل پشتیبان را جداگانه نگه دارید.</p></details>${conflicts.map(([id,c])=>`<div class="alert"><p>اختلاف در پرونده ${esc(c.local?.name||c.remote?.name||'مشتری')}؛ هیچ‌کدام از دو نسخه حذف نشده است.</p>${button('مقایسه دو نسخه','cloud-conflict','secondary','file',`data-id="${esc(id)}"`)}</div>`).join('')}</section>`;
 }
 function cloudLogin(){openDialog(`${modalTitle('ورود اولیه دستگاه','ایمیل و رمز حساب اختصاصی دفتر را وارد کنید. پس از ورود، دستگاه دسترسی را نگه می‌دارد؛ رمز ذخیره نمی‌شود.')}<form id="cloud-login-form"><label>ایمیل<input name="email" type="email" autocomplete="username" dir="ltr" required></label><label>رمز عبور<input name="password" type="password" autocomplete="current-password" dir="ltr" required></label><p>ورود به معنی تأیید نگه داشتن دسترسی همین دستگاه است. از دستگاه شخصی استفاده کنید.</p><div class="form-error" id="form-error" role="alert"></div><div id="firebase-connection-test" hidden><button class="btn secondary" data-action="cloud-diagnose" type="button">بررسی اتصال Firebase بدون رمز</button><p id="firebase-test-result" role="status" aria-live="polite"></p></div><div class="form-actions"><button type="submit" class="btn primary">ورود و نگه داشتن دسترسی دستگاه</button></div></form>`);}
 async function cloudPreview(){
@@ -366,7 +366,7 @@ document.addEventListener('submit',async event=>{
 function saveStrip(){
   if(!storageOK||corrupt||mode==='demo')return '';
   let backed=false;try{backed=localStorage.getItem('daftar.backup-revision.'+mode)===(data.revision||'legacy');}catch{}
-  return `<div class="save-strip"><span>${icon('check')}حساب‌ها روی این دستگاه ذخیره شده‌اند.</span><button data-action="nav" data-view="backup">${icon('backup')}${backed?'فایل آخرین تغییرات آماده شده':'از آخرین تغییرات پشتیبان بگیرید'}</button></div>`;
+  return `<div class="save-strip">${view==='backup'&&data.cloud?'':`<span>${icon('check')}حساب‌ها روی این دستگاه ذخیره شده‌اند.</span>`}<button data-action="${view==='backup'?'export':'nav'}"${view==='backup'?'':' data-view="backup"'}>${icon('backup')}${backed?'فایل آخرین تغییرات آماده شده':'از آخرین تغییرات پشتیبان بگیرید'}</button></div>`;
 }
 $('#dialog').addEventListener('cancel',()=>saveDraft($('#dialog form')));
 $('#dialog').addEventListener('close',()=>{if(!corrupt)render();});
