@@ -6,10 +6,10 @@ This is the standalone GitHub Pages source. The application is fully static; `di
 
 GitHub Pages is live: https://nikahanghojjati-oss.github.io/-daftar-insurance-ledger/.
 
-**Current data status: browser-local; automatic cloud sync is not yet implemented.** A Firebase project was created separately; see [the sync implementation gate](docs/FIREBASE_SYNC_PLAN.md) for the console inputs and reconciliation design.
+Current data status: local-first ledger with optional private Firebase REST synchronization. Owner-approved UID-scoped rules were published. A phone screenshot shows one recorded successful online check; persistent access and two-physical-device production acceptance remain unverified. See [the current work plan](docs/WORK_PLAN.md) and the latest validation notes.
 
 
-Publicly accessible, buildless, browser-local prototype for a beginner. No API, AI, remote customer storage, analytics, CDN, or external font dependencies.
+Publicly accessible, buildless application with a device-local ledger and optional private cloud connection. No AI, analytics, CDN, or external font dependencies.
 
 ## Workflows
 
@@ -32,7 +32,7 @@ Publicly accessible, buildless, browser-local prototype for a beginner. No API, 
 
 ## Deliberate prototype limits
 
-Records are specific to this browser and device. No automatic multi-device sync, notifications, SMS, accounting integration, or business/customer-data server. Local records and exported JSON are not encrypted. Protect device access and backup files. Clearing browser data removes the local ledger. The owner explicitly authorized public access on 2026-11-01 so the app opens without ChatGPT login. Public access exposes the application and fictional demo only; customer records remain in each browser. Profile discovery is a separate ChatGPT setting.
+Unconnected records remain specific to this browser and device. Connected ledgers reconcile at startup, return/focus, reconnect, local save and manual sync; they do not continuously stream updates. No notifications, SMS or accounting integration. Local records and exported JSON are not encrypted. Protect device access and backup files. Clearing browser data removes the local ledger. The owner explicitly authorized public access on 2026-11-01 so the app opens without ChatGPT login. Public access exposes the application and fictional demo only; customer records remain device-local unless the owner explicitly connects the private Firebase ledger. Profile discovery is a separate ChatGPT setting.
 
 Ledger schema 2 reads original schema-1 ledgers and backups without changing amounts. New schema-2 backups retain cancellation history. Unfinished forms are local-only and are not included in confirmed-ledger backups.
 
@@ -49,14 +49,14 @@ Pay in full on the policy start date, or record a real down payment and one to s
 
 The displayed current date uses Tehran time from the current clock and refreshes after midnight, on focus and on page return. Online, a fresh same-origin server Date header is checked; offline, the device clock is required and the UI says so. No offline app can guarantee an authoritative date if that clock is wrong.
 
-## Firebase rules access (owner setup pending)
+## Historical Firebase setup notes (superseded by later entries)
 
 The owner can connect a dedicated rules-only service account through the encrypted GitHub Actions secret `FIREBASE_RULES_SERVICE_ACCOUNT_JSON`. Follow the [Chromebook owner setup guide](docs/FIREBASE_OWNER_SETUP.fa.md). A manual workflow verifies read-only Rules API access; publishing is blocked by a deny-all placeholder until reviewed UID-scoped rules and the sync client are ready. This key never enters GitHub Pages or the chat. No Firebase verification or customer sync has occurred yet.
 
 
 ### Sync preparation (2026-11-02 ET)
 
-The continuation branch includes an optional local-first Firebase REST sync implementation and candidate UID-scoped rules. The console setup and rules-only GitHub access are verified. Cloud customer access is still disabled by the live deny-all rules. See the latest HANDOFF and VALIDATION sections for implemented behavior, evidence and remaining acceptance gates. Never migrate real customer records before those gates pass.
+The continuation branch includes an optional local-first Firebase REST sync implementation and candidate UID-scoped rules. The console setup and rules-only GitHub access are verified. At that preparation stage, cloud customer access was still disabled by deny-all rules; the later activation entry below supersedes it. See the latest HANDOFF and VALIDATION sections for implemented behavior, evidence and remaining acceptance gates. Never migrate real customer records before those gates pass.
 
 Owner-approved private Firebase rules were published on 2026-11-02 ET. The sync client still requires initial device sign-in and connection review; production two-device acceptance must precede migration of real records.
 

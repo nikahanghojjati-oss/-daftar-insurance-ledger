@@ -16,3 +16,5 @@ daftar-demo-*.json
 daftar-own-*.json
 daftar-before-restore-*.json
 daftar-recovery.json
+
+/browser-evidence/

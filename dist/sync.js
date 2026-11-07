@@ -1,8 +1,8 @@
 import {uid,validateLedger} from './core.js';
-import {equal,canonical,initializeCloud,queueChanges,reconcile,resolveConflict,backupLedger} from './sync-model.js';
+import {equal,canonical,initializeCloud,queueChanges,reconcile,resolveConflict,backupLedger,stampBusinessRevision} from './sync-model.js';
 import {FirebaseRest} from './firebase-rest.js';
 import {LEDGER_UID} from './firebase-config.js';
-export {queueChanges,backupLedger};
+export {queueChanges,backupLedger,stampBusinessRevision};
 export const LEDGER_LOCK='daftar-personal-ledger-v1';
 export async function withLedgerLock(task) {
   if(!globalThis.navigator?.locks)throw Error('برای همگام‌سازی، دفتر را در نسخه تازه Chrome یا Safari باز کنید.');
