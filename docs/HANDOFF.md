@@ -1,5 +1,15 @@
 # Daftar: handoff for the next GPT
 
+## Home daily dues — November 7, 2026
+
+Owner requested prominent today/tomorrow installments on Home without crowding it. A single two-column section now precedes the larger account statistics. Each button shows the Persian day/date, open-installment count and remaining amount; today's warm highlight is stronger than tomorrow's. Tapping opens the corresponding exact-day filter in Dues, where both filters are also available. Totals use all pending dueItems, not the four-row preview, and exclude paid installments while preserving partial balances. Existing Tehran clock refresh controls day rollover. No customer lists were added to this section, no storage/sync or accounting calculations changed. Cache v20 supplies the updated assets.
+
+Local 78/78 Node checks pass. Local Chromium launch was attempted and refused by the executor's socket restriction; the added fictional-record browser acceptance must pass in CI before publication. It checks totals despite older overdue items, partial/paid installments, navigation, view-only record preservation, a payment and reload, Tehran midnight while offline, empty/rial states and phone/desktop widths. See the latest VALIDATION entry for release results.
+
+## Shared access activated — November 7, 2026, 12:30 PM ET
+
+After the owner's GitHub sign-in approval, manual publish run 42396610260 succeeded on main commit 8044851ae6a957d8124ddfc4bb7be58a5d7c7155. Firebase readback matched the exact reviewed source (SHA-256 c24f634377c94656335cb074bd74e476cb9f61162e12d6c2ecb8553e3e241f9b). Both approved account UIDs now have production permission to the original ledger. This supersedes the publication-pending notes below. Actual father sign-in and physical-device payment synchronization remain NOT CHECKED.
+
 ## Shared account access — November 7, 2026
 
 Owner supplied the father's Auth UID `OrAHVtSfEGXWBSqswGdr74O3CO62` and delegated the account arrangement with preservation of data as the priority. Selected arrangement: two explicit authorized sign-ins share the original ledger `i6VYpbhc1Iaf0qNjILLRnwhvISR2`. This is not a per-user ledger feature. Existing customer paths, currency, queues, receipts and backups stay in place. Do not rename the ledger to the father's UID or reset browser storage.

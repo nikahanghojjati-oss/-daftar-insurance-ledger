@@ -1,5 +1,17 @@
 # Validation — 2026-11-01
 
+## Home today/tomorrow summary — November 7, 2026
+
+Added two compact exact-day summaries above the Home account statistics, with remaining amounts, open counts, Persian dates and direct navigation to the matching Dues filter. Reads the same pending installment allocation used by profiles; no accounting, persistence or Firebase behavior changed. Cache protocol advanced consistently to v20.
+
+Local validation: all 78 Node tests pass; app and browser script syntax and diff checks pass. Local Chromium was attempted but could not launch because the executor refused its singleton socket. CI browser acceptance and visual inspection are pending at the initial feature commit; no browser or publication success is claimed from those local checks.
+
+The added scripts/browser-daily-dues.cjs uses only fictional local records and rejects unexpected Google API calls. It exercises two today dues totaling 800,000 toman after a partial receipt, one tomorrow due totaling 1,200,000 with a second tomorrow policy already paid, five older overdue items, exact-day navigation, unchanged records from browsing, payment/reload updates, offline Tehran midnight rollover, empty rial state, and 360/390/768/1280px layout checks.
+
+## Shared-access production rule publication — November 7, 2026
+
+Manual publish run https://github.com/nikahanghojjati-oss/-daftar-insurance-ledger/actions/runs/42396610260 succeeded at 12:30 PM ET on reviewed main commit 8044851ae6a957d8124ddfc4bb7be58a5d7c7155. Logs confirm operation publish and FIREBASE_RULES_EXACT_SOURCE_OK for daftar-insurance-ledger, SHA-256 c24f634377c94656335cb074bd74e476cb9f61162e12d6c2ecb8553e3e241f9b. The publisher read back the active release and compared its sole source file byte-for-byte with the reviewed rules. Both supplied authorized UIDs can access the original ledger path. No production customer data was read or written. This supersedes the earlier manual-publication-pending status; actual father sign-in, phone persistence and physical two-device exchange remain NOT CHECKED.
+
 ## Shared account access candidate — November 7, 2026
 
 Two allowlisted accounts use the original ledger path. No customer migration, ledger/schema rewrite, payment calculation change, browser-storage reset or production record operation is part of this update. Old sessions infer the original auth identity; new sessions persist authUid separately and reject identity changes during renewal. Rules retain immutable metadata, bounded envelopes, no hard deletes and deny other users/paths.
