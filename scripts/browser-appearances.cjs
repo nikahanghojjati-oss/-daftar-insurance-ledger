@@ -13,6 +13,7 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'browser-evidence');
  await context.addInitScript(seed=>{if(!localStorage.getItem('daftar.ledger.v1')){localStorage.setItem('daftar.ledger.v1',JSON.stringify(seed));localStorage.setItem('daftar.mode.v1','own');}},ledger);
  await context.route('https://*.googleapis.com/**',route=>{errors.push('Unexpected production network');return route.abort();});
  const p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));await p.goto(base);await p.waitForFunction(()=>document.fonts.status==='loaded');
+ await p.locator('.appearance-settings').click();await p.locator('input[value="desk"]').check();await p.locator('[data-action="home"]').last().click();
  const before=await p.evaluate(()=>localStorage.getItem('daftar.ledger.v1')),layouts=[];
  for(const [index,id] of ['daybook','agenda','desk'].entries()){
   await p.locator('.appearance-settings').click();await p.locator(`input[name="appearance"][value="${id}"]`).check();
