@@ -1,0 +1,187 @@
+/* Three lightweight, device-local visual systems. Shared ledger and forms. */
+:root{--green:#234f66;--green-deep:#163f52;--green-soft:#e2edf2;--ink:#203a4c;--muted:#52636c;--line:#d6d3cc;--bg:#f4f0e7;--red:#a33f2b;--red-soft:#f8ebe5;--radius:10px;--surface:#fbf8f2;--soft:#dde8ee;--accent:#9e4734}
+:root[data-appearance=agenda]{--green:#405f78;--green-deep:#29485f;--green-soft:#e4ebed;--ink:#26352f;--muted:#59625f;--line:#cbd0cb;--bg:#f0f1ec;--surface:#f8f9f5;--soft:#e5e9e6;--accent:#a34430}
+:root[data-appearance=desk]{--green:#285bb5;--green-deep:#18448e;--green-soft:#e2ebfa;--ink:#203744;--muted:#526572;--line:#cedae2;--bg:#e8eef2;--surface:#fff;--soft:#dde8f3;--accent:#a34430}
+body{background:var(--bg);color:var(--ink);font-size:16px}
+.btn.primary{background:var(--green);border-color:var(--green-deep)}
+.btn.primary:hover{background:var(--green-deep)}
+.btn.secondary,.panel,.backup-card,.settings-card,dialog{background:var(--surface);border-color:var(--line)}
+.btn,.panel,dialog,.backup-card,.settings-card{border-radius:10px;box-shadow:none}
+.btn{min-height:48px;font-size:14px}
+.text-btn,.due-bottom,.tip-strip button,.help-link,.green-text{color:var(--green)}
+button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible{outline:3px solid var(--green);outline-offset:3px}
+.search:focus-within{outline:2px solid var(--green)}
+.chip.selected,.mobile-nav button.active{background:var(--green-soft);color:var(--green-deep);border-color:var(--green)}
+.sidebar{background:var(--green-deep)}
+.nav-item.active{background:#ffffff20;box-shadow:inset -3px 0 #fff}
+.nav-item.active .icon{color:#fff}
+.topbar{background:var(--surface);border-color:var(--line);height:auto;min-height:78px;padding-block:12px}
+.topbar-brand{font-size:27px;font-weight:800;color:var(--ink)}
+.topbar-right{flex-wrap:wrap;gap:8px 18px}
+.appearance-settings{min-height:48px;padding:7px 14px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink);font:inherit;font-size:14px}
+:root[data-appearance=desk] .topbar{background:#263744;color:#fff;border-color:#263744}
+:root[data-appearance=desk] .topbar .crumb,:root[data-appearance=desk] .topbar .crumb strong,:root[data-appearance=desk] .topbar-brand,:root[data-appearance=desk] .today,:root[data-appearance=desk] .today small{color:#fff}
+:root[data-appearance=desk] .appearance-settings{background:#334c5d;border-color:#6b8290;color:#fff}
+:root[data-appearance=desk] .topbar button:focus-visible{outline-color:#fff}
+main{max-width:1250px}
+.home-design{max-width:920px;margin-inline:auto}
+.home-masthead{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 16px}
+.home-masthead h1{font-size:32px;line-height:1.5;font-weight:800;margin:0;color:var(--ink)}
+.home-masthead .eyebrow{font-size:13px;color:var(--muted);margin:0}
+.home-masthead p{margin:3px 0 0;color:var(--muted);font-size:14px}
+.home-masthead>.icon{width:40px;height:40px;padding:8px;box-sizing:content-box;color:var(--accent);border:1px solid var(--line);border-radius:8px}
+.agenda-date{border-right:1px solid var(--line);padding-right:20px;display:grid;text-align:center;line-height:1.2;flex-shrink:0}
+.agenda-date strong{font-size:58px;font-weight:800}
+.agenda-date span{font-size:13px;line-height:2}
+.home-design .daily-dues{margin:0 0 12px;gap:12px;grid-template-columns:1fr 1fr}
+.home-design .daily-due{min-width:0;padding:18px;text-align:right;border:1px solid var(--line);background:var(--surface);border-radius:10px;box-shadow:none;min-height:136px;color:var(--ink);font-family:inherit}
+.home-design .daily-due-top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:17px;font-weight:750}
+.home-design .daily-due-count{font-size:14px;font-weight:500}
+.home-design .daily-due-date{font-size:14px;color:inherit;opacity:.85;margin-top:3px}
+.home-design .daily-due-amount{display:block;font-size:30px;font-weight:800;line-height:1.5;margin:6px 0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.home-design .daily-due-amount small{font-size:13px;font-weight:500}
+.home-design .daily-due-link{display:flex;align-items:center;justify-content:space-between;font-size:14px;gap:8px;color:inherit}
+.home-design .daily-due-link .icon{width:18px;height:18px}
+.home-daybook .daily-dues{grid-template-columns:1fr}
+.home-daybook .daily-due-today{background:#163f52;border-color:#163f52;color:#fff;padding:22px}
+.home-daybook .daily-due-today .daily-due-top{font-size:25px}
+.home-daybook .daily-due-today .daily-due-amount{font-size:clamp(34px,6vw,52px);margin:8px 0 16px}
+.home-daybook .daily-due-today .daily-due-link{background:#fbf8f2;color:#163f52;padding:10px 14px;border-radius:6px;min-height:46px;font-weight:750}
+.home-daybook .daily-due-tomorrow{display:grid;grid-template-columns:1fr 1fr;background:#dde8ee;min-height:88px;gap:0 12px;align-items:center}
+.home-daybook .daily-due-tomorrow .daily-due-top{grid-column:1;font-size:17px;display:grid;gap:0}
+.home-daybook .daily-due-tomorrow .daily-due-date{grid-column:1;grid-row:2;font-size:13px}
+.home-daybook .daily-due-tomorrow .daily-due-amount{grid-column:2;grid-row:1/3;font-size:25px;border-right:1px solid #b4c6ce;padding-right:12px;text-align:left}
+.home-daybook .daily-due-tomorrow .daily-due-link{display:none}
+.home-agenda .daily-dues{display:block;margin-bottom:14px}
+.home-agenda .daily-due{display:grid;grid-template-columns:1fr auto;align-items:center;gap:0 16px;width:100%;border-radius:0;border-width:0 0 1px;background:transparent;min-height:94px;padding:13px 10px}
+.home-agenda .daily-due-today{background:#ece6df;border-right:4px solid #a34430;border-radius:5px 0 0 5px}
+.home-agenda .daily-due-top{display:grid;gap:0;grid-column:1;font-size:20px}
+.home-agenda .daily-due-date{grid-column:1;font-size:13px}
+.home-agenda .daily-due-amount{grid-column:2;grid-row:1/3;font-size:27px}
+.home-agenda .daily-due-link{display:none}
+.home-agenda>.btn{width:100%;margin:0 0 18px}
+.home-desk .daily-dues{gap:0;border-radius:10px;background:#fff;padding:14px 4px}
+.home-desk .daily-due{padding:0 12px;background:none;border:0;border-radius:0;min-height:130px}
+.home-desk .daily-due-today{border-left:1px solid var(--line);color:var(--accent)}
+.home-desk .daily-due-top{display:grid;gap:0;font-size:18px}
+.home-desk .daily-due-count{color:var(--muted)}
+.home-desk .daily-due-amount{font-size:26px}
+.home-desk .daily-due-amount small{display:block;line-height:1.3;color:var(--muted);font-size:12px}
+.home-desk .daily-due-link{font-size:12px}
+.home-balance.stats{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 16px;border:1px solid #ddcfc2;background:#f7efe5;border-radius:9px;padding:14px 16px;margin:12px 0 18px}
+.home-balance>div{display:flex;align-items:center;justify-content:space-between;flex:1;gap:12px;min-width:0}
+.home-balance span{font-size:15px;font-weight:700}
+.home-balance strong{font-size:26px;line-height:1.5;overflow-wrap:anywhere}
+.home-balance strong small{font-size:12px;font-weight:500}
+.home-balance .home-overdue{margin:0;border-top:1px solid #e4d8cd;padding-top:7px;flex-basis:100%;color:var(--accent);font-size:14px;font-weight:650}
+.home-agenda .home-balance{border:0;border-block:1px solid var(--line);background:transparent;border-radius:0}
+.home-agenda .home-balance>div{display:grid;gap:3px;flex-basis:40%}
+.home-agenda .home-balance>div+div{border-right:1px solid var(--line);padding-right:16px}
+.home-agenda .home-balance span{color:var(--muted);font-size:14px;font-weight:500}
+.home-agenda .home-balance strong{font-size:24px}
+.home-section-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0}
+.home-section-heading h2{font-size:19px;font-weight:750;margin:0}
+.home-section-heading .text-btn{min-height:48px;font-size:14px;flex-shrink:0}
+.home-customers .search{margin:0 0 6px;min-height:48px;background:var(--surface);border:1px solid #aeb7bb;border-radius:7px;padding:8px 12px}
+.home-customers .search input{font-size:16px;height:30px}
+.home-customers .search kbd{display:none}
+.home-customer{display:flex;width:100%;align-items:center;justify-content:space-between;gap:12px;min-height:52px;padding:9px 0;border-bottom:1px solid var(--line);text-align:right;font-size:16px}
+.home-customer-identity{display:flex;gap:9px;align-items:center;min-width:0;flex:1}
+.home-customer-identity .icon{color:var(--green);background:var(--soft);padding:4px;width:28px;height:28px;border-radius:5px;flex-shrink:0}
+.home-customer b{color:var(--ink);font-size:16px;overflow-wrap:anywhere}
+.home-customer>span:nth-child(2){font-weight:700;overflow-wrap:anywhere;max-width:45%;font-variant-numeric:tabular-nums}
+.home-customer small{font-size:12px;font-weight:400;display:inline}
+.home-customer>.icon{display:none}
+.home-customers>.btn{margin-top:10px}
+.home-desk .home-customers>.btn{width:100%}
+.today-task{display:flex;align-items:center;gap:10px;width:100%;padding:14px 12px;text-align:right;min-height:72px;border-bottom:1px solid var(--line)}
+.today-task:last-child{border:0}
+.today-task>span:first-child{flex:1;min-width:0}
+.today-task b{font-size:16px;display:block;overflow-wrap:anywhere}
+.today-task small{font-size:13px;color:var(--muted);display:block}
+.today-task strong{font-size:17px;max-width:35%;overflow-wrap:anywhere}
+.today-task strong small{font-size:11px}
+.task-open{display:flex;align-items:center;gap:4px;color:var(--green);font-size:13px;border:1px solid var(--green);border-radius:5px;padding:5px 7px;min-height:42px}
+.task-open .icon{width:17px;height:17px}
+.today-empty{font-size:15px;padding:16px;margin:0;color:var(--muted)}
+.appearance-panel{padding:24px;max-width:800px}
+.appearance-panel fieldset{padding:0;border:0;margin:0}
+.appearance-panel legend{font-weight:750;font-size:20px}
+#appearance-help{font-size:15px;color:var(--muted);margin:8px 0 20px}
+.appearance-choices{display:grid;gap:12px}
+.appearance-choice{display:flex;gap:12px;align-items:center;min-height:96px;border:2px solid var(--line);padding:14px;border-radius:9px;cursor:pointer;background:var(--surface)}
+.appearance-choice:has(input:checked){border-color:var(--green);background:var(--green-soft)}
+.appearance-choice input{accent-color:var(--green);width:22px;height:22px;flex-shrink:0;margin:0}
+.appearance-choice b{display:block;font-size:18px}
+.appearance-choice small{display:block;font-size:14px;color:var(--muted);line-height:1.8}
+.appearance-number{font-size:25px;font-weight:800;min-width:26px}
+.appearance-palette{width:14px;align-self:stretch;flex-shrink:0;margin-right:auto;border-radius:3px;background:#163f52}
+.choice-agenda .appearance-palette{background:#405f78}
+.choice-desk .appearance-palette{background:#285bb5}
+#appearance-result{min-height:28px;font-size:15px;color:var(--ink);margin:14px 0}
+.appearance-shortcut{margin-bottom:18px}
+.mobile-nav{background:var(--surface);border-color:var(--line)}
+.mobile-nav button{min-height:58px;font-size:13px;color:var(--muted)}
+.mobile-nav button.active{border:0;box-shadow:none}
+.stat.owed{background:var(--green-deep);border-color:var(--green-deep)}
+.stat.owed:after{display:none}
+@media(max-width:760px){
+ .topbar{padding:10px 14px;gap:8px;align-items:flex-start;flex-wrap:wrap}
+ .crumb{gap:6px;min-height:48px;align-items:center}
+ .crumb>span:not(.topbar-brand),.crumb>strong{font-size:12px}
+ .topbar-right{display:contents}
+ .appearance-settings{margin-right:auto;order:0}
+ .connection{order:2;font-size:12px;padding:3px 7px;min-height:28px;border:0;background:var(--soft);color:var(--ink);margin-left:auto}
+ .today{order:3;font-size:12px;display:flex;flex-wrap:wrap;gap:4px;max-width:100%;padding:0}
+ .today small{font-size:10px;flex-basis:100%;padding-right:0;text-align:left}
+ .today .icon{display:none}
+ main{padding:16px 14px 98px}
+ .save-strip{font-size:12px;padding:8px 0;line-height:1.8;background:transparent;border:0;margin-bottom:12px}
+ .save-strip button{font-size:12px;min-height:40px}
+ .demo-banner{padding:7px 10px;font-size:12px;margin-bottom:14px;border-radius:6px;gap:8px}
+ .demo-banner .btn{font-size:12px;min-height:44px}
+ .demo-banner>span>.icon{display:none}
+ .home-masthead{margin-bottom:12px}
+ .home-masthead h1{font-size:29px}
+ .home-masthead .eyebrow{font-size:12px}
+ .home-masthead p{font-size:13px}
+ .home-masthead>.icon{width:28px;height:28px}
+ .home-design .daily-due{padding:14px}
+ .home-daybook .daily-due-today{padding:18px}
+ .home-daybook .daily-due-tomorrow .daily-due-amount{font-size:22px}
+ .home-agenda .daily-due{padding:12px 10px}
+ .home-agenda .daily-due-amount{font-size:24px}
+ .home-agenda .daily-due-top{font-size:18px}
+ .home-desk .daily-due{padding:0 10px}
+ .home-desk .daily-due-amount{font-size:24px}
+ .home-desk .daily-due-top{font-size:17px}
+ .home-balance.stats{padding:12px;margin-bottom:14px;gap:6px 12px}
+ .home-balance strong{font-size:23px}
+ .home-balance span{font-size:14px}
+ .home-balance .home-overdue{font-size:13px}
+ .home-agenda .home-balance strong{font-size:22px}
+ .home-customer b{font-size:15px}
+ .home-customer{gap:8px}
+ .home-customer>span:nth-child(2){font-size:15px}
+ .home-customer small{display:block;font-size:11px}
+ .home-customer-identity{gap:7px}
+ .home-customer-identity .icon{width:25px;height:25px}
+ .appearance-panel{padding:18px 14px}
+ .appearance-choice{gap:10px;padding:12px 10px}
+ .appearance-choice b{font-size:17px}
+ .appearance-choice small{font-size:14px}
+ .appearance-number{font-size:23px;min-width:20px}
+ .footer{font-size:11px;padding:18px 0}
+ .page-heading p,.field,.modal-head p,.backup-card p{font-size:14px}
+ .customer-name b{font-size:15px}
+ .due-info b{font-size:15px}
+ .customer-name small,.due-info small{font-size:12px}
+ .customer-table th{font-size:12px}
+ .amount-cell{font-size:16px}
+ .badge{font-size:12px}
+ .chip{font-size:14px;min-height:48px}
+ .form-actions .btn,.settings-actions .btn{font-size:14px;min-height:48px}
+ .task-open{padding:5px;min-width:42px;justify-content:center}
+ .task-open .icon{display:none}
+}
+@media(min-width:1100px){.home-desk{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}.home-desk .home-masthead,.home-desk .daily-dues{grid-column:1/-1}.home-desk .home-today-list{grid-column:1;grid-row:3/5}.home-desk .home-balance{grid-column:2}.home-desk .home-customers{grid-column:2}}
