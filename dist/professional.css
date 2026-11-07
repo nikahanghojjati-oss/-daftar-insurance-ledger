@@ -378,12 +378,12 @@ dialog::backdrop{background:#152f4266;backdrop-filter:blur(5px)}
 .daily-due-link .icon{width:16px;height:16px}
 @media(max-width:700px){
   .daily-dues{gap:10px;margin-bottom:18px}
-  .daily-due{grid-template-columns:minmax(0,1fr);gap:3px;padding:13px;border-radius:12px}
+  .daily-due{grid-template-columns:minmax(0,1fr);align-content:start;gap:3px;padding:13px;border-radius:12px;line-height:1.65}
   .daily-due-top{font-size:14px;gap:4px}
   .daily-due-count{font-size:11px;padding:1px 5px}
   .daily-due-date{font-size:12px}
-  .daily-due-amount{font-size:22px;line-height:1.65;margin:3px 0}
-  .daily-due-amount small{font-size:11px}
+  .daily-due-amount{font-size:22px;line-height:1.45;margin:3px 0}
+  .daily-due-amount small{display:block;font-size:11px;line-height:1.5}
   .daily-due-link{font-size:12px;padding-bottom:0;justify-content:space-between}
 }
 

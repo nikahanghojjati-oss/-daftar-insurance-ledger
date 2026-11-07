@@ -42,7 +42,7 @@ const root=path.resolve(__dirname,'..'),out=path.resolve(process.env.BROWSER_EVI
   await context.route('**/index.html?__daftar_clock=*',route=>route.fulfill({status:200,headers:{date:fixed.toUTCString()}}));
   await context.addInitScript(seed=>{if(!localStorage.getItem('daftar.ledger.v1')){localStorage.setItem('daftar.ledger.v1',JSON.stringify(seed));localStorage.setItem('daftar.mode.v1','own');}},ledger);
   const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
-  await page.clock.install({time:fixed});
+  await page.clock.install({time:fixed});await page.clock.pauseAt(fixed);
   await page.goto('http://127.0.0.1:'+server.address().port+'/');
   await page.getByText('تاریخ آنلاین بررسی شد',{exact:true}).waitFor();
   const today=page.locator('.daily-due-today'),tomorrow=page.locator('.daily-due-tomorrow');

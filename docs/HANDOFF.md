@@ -6,6 +6,8 @@ Owner requested prominent today/tomorrow installments on Home without crowding i
 
 Local 78/78 Node checks pass. Local Chromium launch was attempted and refused by the executor's socket restriction; the added fictional-record browser acceptance must pass in CI before publication. It checks totals despite older overdue items, partial/paid installments, navigation, view-only record preservation, a payment and reload, Tehran midnight while offline, empty/rial states and phone/desktop widths. See the latest VALIDATION entry for release results.
 
+Initial Chromium acceptance passed in run 42397205664; downloaded phone/desktop screenshots were inspected. Final phone styling aligns both currency labels on their own line; the test clock is paused for deterministic midnight coverage. Require final-head CI before merge.
+
 ## Shared access activated — November 7, 2026, 12:30 PM ET
 
 After the owner's GitHub sign-in approval, manual publish run 42396610260 succeeded on main commit 8044851ae6a957d8124ddfc4bb7be58a5d7c7155. Firebase readback matched the exact reviewed source (SHA-256 c24f634377c94656335cb074bd74e476cb9f61162e12d6c2ecb8553e3e241f9b). Both approved account UIDs now have production permission to the original ledger. This supersedes the publication-pending notes below. Actual father sign-in and physical-device payment synchronization remain NOT CHECKED.
