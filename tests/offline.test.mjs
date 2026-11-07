@@ -14,7 +14,7 @@ function harness({redirect=null,login=false,origin='https://daftar.test/'}={}){
   return {context,listeners,cache,wait,setOffline:v=>offline=v,setAuth:v=>auth=v,get claimed(){return claimed;},async request(path,navigate=false){let response;const request=new Request(new URL(path,origin).href);Object.defineProperty(request,'mode',{value:navigate?'navigate':'cors'});listeners.fetch({request,respondWith:r=>response=r});return await response;}};
 }
 test('Offline shell is complete before ready; navigation and all assets work without network',async()=>{
-  const h=harness();vm.runInNewContext(await fs.readFile(new URL('../dist/sw.js',import.meta.url),'utf8'),h.context);await h.wait('install');await h.wait('activate');assert.ok(h.claimed);assert.equal(h.cache.size,19);
+  const h=harness();vm.runInNewContext(await fs.readFile(new URL('../dist/sw.js',import.meta.url),'utf8'),h.context);await h.wait('install');await h.wait('activate');assert.ok(h.claimed);assert.equal(h.cache.size,21);
   let ready;let pending;h.listeners.message({data:'CHECK_READY',ports:[{postMessage:value=>ready=value.ready}],waitUntil:p=>pending=p});await pending;assert.equal(ready,true);
   h.setOffline(true);assert.match(await (await h.request('/',true)).text(),/دفتر/);assert.equal((await h.request('/app.js')).status,200);assert.equal((await h.request('/style.css')).status,200);assert.equal((await h.request('/fonts/Vazirmatn.woff2')).status,200);assert.equal((await h.request('/offline.js')).status,200);assert.equal((await h.request('/connectivity.js')).status,200);
 });
@@ -30,7 +30,7 @@ test('Failed initial shell download does not report ready',async()=>{
 });
 
 test('Canonical same-origin index.html redirects install successfully on the real Sites host',async()=>{
- const h=harness({redirect:'/'});vm.runInNewContext(await fs.readFile(new URL('../dist/sw.js',import.meta.url),'utf8'),h.context);await h.wait('install');assert.equal(h.cache.size,19);
+ const h=harness({redirect:'/'});vm.runInNewContext(await fs.readFile(new URL('../dist/sw.js',import.meta.url),'utf8'),h.context);await h.wait('install');assert.equal(h.cache.size,21);
 });
 test('Redirects to sign-in/external origins and 200 login HTML cannot be cached as the app',async()=>{
  for(const options of [{redirect:'/login'},{redirect:'https://auth.test/'},{login:true}]){const h=harness(options);vm.runInNewContext(await fs.readFile(new URL('../dist/sw.js',import.meta.url),'utf8'),h.context);await assert.rejects(()=>h.wait('install'));assert.equal(h.cache.size,0);}
@@ -41,8 +41,20 @@ test('GitHub Pages subpaths cache the app and font offline without touching anot
  h.context.caches.keys=async()=>['daftar-shell-v5:/daftar/','daftar-shell-v6:/other/','game-cache'];
  h.context.caches.delete=async name=>{deleted.push(name);return true;};
  vm.runInNewContext(await fs.readFile(new URL('../dist/sw.js',import.meta.url),'utf8'),h.context);await h.wait('install');await h.wait('activate');
- assert.deepEqual(deleted,['daftar-shell-v5:/daftar/']);assert.equal(h.cache.size,19);
+ assert.deepEqual(deleted,['daftar-shell-v5:/daftar/']);assert.equal(h.cache.size,21);
  assert.ok([...h.cache.keys()].every(key=>key.startsWith('https://owner.github.io/daftar/')));
  h.setOffline(true);assert.match(await(await h.request('/daftar/',true)).text(),/دفتر/);assert.equal((await h.request('app.js')).status,200);assert.equal((await h.request('fonts/Vazirmatn.woff2')).status,200);assert.equal(await h.request('/other/app.js'),undefined);
 });
 
+
+test('exact public Pages navigation reopens cached shell without waiting on network; clock still bypasses',async()=>{
+ const h=harness({origin:'https://nikahanghojjati-oss.github.io/-daftar-insurance-ledger/'});
+ vm.runInNewContext(await fs.readFile(new URL('../dist/sw.js',import.meta.url),'utf8'),h.context);await h.wait('install');
+ // Reject every fetch after install. A cached public navigation must not call it.
+ h.context.fetch=()=>{throw Error('navigation must use verified cache');};
+ assert.match(await(await h.request('./',true)).text(),/دفتر/);
+ assert.match(await(await h.request('index.html?launch=1',true)).text(),/دفتر/);
+ assert.equal(await h.request('index.html?__daftar_clock=1'),undefined);
+ assert.equal((await h.request('appearance.js')).status,200);
+ assert.equal((await h.request('appearances.css')).status,200);
+});

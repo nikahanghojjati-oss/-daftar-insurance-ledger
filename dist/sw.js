@@ -1,7 +1,7 @@
-const CACHE_VERSION='daftar-shell-v20';
+const CACHE_VERSION='daftar-shell-v21';
 const CACHE_SCOPE=new URL(self.registration.scope).pathname;
 const CACHE=CACHE_VERSION+':'+CACHE_SCOPE;
-const SHELL=['./','./index.html','./app.js','./core.js','./clock.js','./firebase-config.js','./firebase-rest.js','./connectivity.js','./sync-model.js','./sync.js','./offline.js','./style.css','./readability.css','./recovery.css','./finance.css','./professional.css','./fonts/Vazirmatn.woff2','./icon.svg','./manifest.webmanifest'];
+const SHELL=['./','./index.html','./app.js','./appearance.js','./appearances.css','./core.js','./clock.js','./firebase-config.js','./firebase-rest.js','./connectivity.js','./sync-model.js','./sync.js','./offline.js','./style.css','./readability.css','./recovery.css','./finance.css','./professional.css','./fonts/Vazirmatn.woff2','./icon.svg','./manifest.webmanifest'];
 const absolute=path=>new URL(path,self.registration.scope).href;
 async function download(path){
   const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),15000);
@@ -43,6 +43,12 @@ self.addEventListener('fetch',event=>{
   const request=event.request,url=new URL(request.url);
   if(request.method!=='GET'||url.origin!==self.location.origin||url.searchParams.has('__daftar_clock'))return;
   if(request.mode==='navigate') {
+    // This exact public Pages app has no hosting login. Reopen its verified
+    // complete shell immediately; SW update still installs atomically online.
+    // Other hosts keep network-first so a hosting-auth failure stays visible.
+    if(url.origin==='https://nikahanghojjati-oss.github.io'&&CACHE_SCOPE==='/-daftar-insurance-ledger/'&&[CACHE_SCOPE,CACHE_SCOPE+'index.html'].includes(url.pathname)){
+      event.respondWith((async()=>{const cache=await caches.open(CACHE);return await cache.match(absolute('./index.html'))||fetch(request);})());return;
+    }
     event.respondWith((async()=>{
       const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),3500);
       try{return await fetch(new Request(request,{signal:abort.signal}));}

@@ -18,6 +18,7 @@ jobs:
       - name: Verify source syntax
         run: |
           node --check dist/app.js
+          node --check dist/appearance.js
           node --check dist/core.js
           node --check dist/clock.js
           node --check dist/offline.js
