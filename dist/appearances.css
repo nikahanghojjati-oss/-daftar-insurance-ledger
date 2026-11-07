@@ -277,3 +277,15 @@ main{max-width:1250px}
  .today-task{line-height:1.5;padding:12px 10px}
  .today-task strong small{display:inline;font-size:11px}
 }
+
+@media(max-width:760px){
+ :root[data-view=settings] .page-heading{margin-bottom:12px}
+ :root[data-view=settings] .page-heading .eyebrow{display:none}
+ :root[data-view=settings] .page-heading h1{font-size:25px}
+ :root[data-view=settings] .page-heading p{font-size:14px;line-height:1.7}
+ .appearance-panel legend{font-size:18px}
+ #appearance-help{margin:6px 0 14px;font-size:14px;line-height:1.7}
+ .appearance-choice{min-height:88px;padding:10px;gap:9px}
+ .appearance-choice b{font-size:17px;line-height:1.6}
+ .appearance-choice small{font-size:13px;line-height:1.7}
+}
