@@ -119,3 +119,24 @@ The owner reproduced `NETWORK_UNAVAILABLE` in the live mobile UI, so the current
 ## Safari fetch receiver fix — 2026-11-03 ET
 
 Owner device-specific independent probe returned SITE_OK | GOOGLE_REACHABLE | AUTH_REACHABLE while the regular login page displayed NETWORK_UNAVAILABLE. Reproducing the code path showed that `FirebaseRest` stored native `globalThis.fetch` then invoked `this.fetcher()`, binding the receiver to the client instance. Some native browsers reject such calls with Illegal invocation before network activity. Regression test installs a receiver-checking browser-like fetch and verifies default FirebaseRest sign-in uses global receiver and persists only Firebase tokens, not password. The fix uses an arrow wrapper for default fetch, and bumps offline shell version to v16. Firebase Auth real-account login and physical device sync still require owner acceptance after Pages deployment.
+
+
+## Single-owner reliability release — November 7, 2026
+
+The owner canceled the two-GPT split. Sol implemented this release alone; the former split-plan draft #16 is closed. The ordered backlog is docs/WORK_PLAN.md.
+
+Application candidate: `a150293c457beb74292e149cfb48773ccf117368` in PR #17. Local Node suite: 73/73 pass; changed JS syntax and diff checks pass. Three new independent cases cover transport-only backup freshness, remote/local receipts and acknowledgement, retained conflict/cancellation history, and revision-less legacy ledgers. They exercise the same revision helper used by real app writes. No receipt or calendar calculation changes.
+
+CI passed:
+
+- Node/source checks: https://github.com/nikahanghojjati-oss/-daftar-insurance-ledger/actions/runs/42394129962
+- Firebase rules and real REST emulator transport: four groups pass, including isolated persisted device states, offline merge, preconditions and readbacks: https://github.com/nikahanghojjati-oss/-daftar-insurance-ledger/actions/runs/42394129957
+- Chromium UI, two isolated contexts: https://github.com/nikahanghojjati-oss/-daftar-insurance-ledger/actions/runs/42394130049
+
+The browser test uses intercepted REST with exclusively fictional records and synthetic session tokens, never the production account. It proved a downloaded backup remains current after a no-change sync; a 100,000-toman payment reaches the other session; retained access survives reload after expired-token renewal; a second 200,000-toman receipt survives offline saving and offline reload; and reconnection converges to 300,000 paid with exactly two stable receipts and two customer writes. No page JavaScript errors. No horizontal overflow at 360×660, 360×480 and 1280×900. Phone and desktop screenshots were downloaded and inspected. The initial screenshots contain transient download/sync feedback; the assertions verify settled data separately. Artifact retention is seven days; the reusable script is scripts/browser-sync.cjs.
+
+Local Chromium could not launch because the executor refused its Unix socket; shared Chrome could not reach the separate preview server. Browser proof above comes from CI Chromium, not those failed local attempts.
+
+A local CPU comparison of portable business content with ten fictional receipts per customer preserved revisions at 100/500/1,000 customers. Serialized ledgers were about 143/717/1,435 KB; single comparison observations were 14/37/50 ms on this executor. These are diagnostic observations, not benchmarks on the father's phone and not proof of faster overall sync.
+
+Still NOT CHECKED: real-account login/persistence and expired-token renewal on the actual Safari/Android devices; production A-to-B and B-to-A payment exchange; physical-device offline recovery. The owner's screenshot establishes one displayed successful online check only. Cloud UI timestamps remain historical checks, not a claim that every device is current.

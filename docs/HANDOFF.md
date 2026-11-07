@@ -1,5 +1,15 @@
 # Daftar: handoff for the next GPT
 
+## Current summary — November 7, 2026
+
+The owner canceled all work splitting. Sol owns the whole project without helper agents; use [WORK_PLAN.md](WORK_PLAN.md). Draft PR #16 is closed and superseded by reliability PR #17.
+
+Firebase REST sync is implemented and UID-scoped rules were historically owner-approved and published. The owner screenshot shows one recorded successful online check. Persistent access and payment exchange between the actual physical devices remain NOT CHECKED. Do not reuse older browser-local-only paragraphs below as the current summary.
+
+Backup revision now tracks portable business records and retained history, ignoring transport-only updates. The backup screen has one online status and expandable help. Cache v18 includes these changes; open PR #15 still targets v17 and needs rebasing before future integration. No schema, monetary/date calculations, production records or Firebase rules were changed.
+
+73 Node checks, four Firestore emulator groups and the two-context Chromium acceptance scenario passed on the application candidate `a150293c457beb74292e149cfb48773ccf117368`. See the latest VALIDATION.md entry for evidence and limitations.
+
 ## Start here
 Read AGENTS.md, README.md and VALIDATION.md. This repository is the standalone source for the Persian insurance ledger built for the owner's father. Work only in this project, not the owner's football game repository.
 

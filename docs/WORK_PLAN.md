@@ -14,8 +14,8 @@ Updated November 7, 2026. Sol is responsible for the entire application. The own
 
 | Order | Work | Status / completion condition |
 | --- | --- | --- |
-| 1 | Correct backup freshness and reduce duplicated sync UI | Implemented on the reliability branch; release waits for CI/browser evidence. Routine sync preserves the backup marker; records, incoming receipts, cancellations and retained conflict history invalidate it. |
-| 2 | Exercise the real UI in two isolated browser sessions | Automated browser scenario added: token renewal, retained session, online payment exchange, offline save/reload, reconnect, exact receipt convergence, backup freshness and responsive layout. This uses intercepted REST, not production Firebase. |
+| 1 | Correct backup freshness and reduce duplicated sync UI | Implemented and validated by Node, emulator and browser CI; integration/deployment are tracked in PR #17. Routine sync preserves the backup marker; records, incoming receipts, cancellations and retained conflict history invalidate it. |
+| 2 | Exercise the real UI in two isolated browser sessions | PASS in browser CI run 42394130049: token renewal, retained session, online payment exchange, offline save/reload, reconnect, exact receipt convergence, backup freshness and responsive layout. This uses intercepted REST, not production Firebase. |
 | 3 | Establish physical production acceptance | NOT CHECKED: real-account reopen, expired-token renewal, A-to-B/B-to-A records/payments, offline recovery and concurrent changes. Continue work that does not require unavailable device access; never mark these passed from CI. |
 | 4 | Improve payment entry and keyboard/error handling | Next: make customer, currency, amount, actual date and resulting balance clear; retain drafts/errors; prevent accidental repeat submit through existing stable commands. |
 | 5 | Bound customer rendering and preserve search context | Next: render manageable batches while local search still covers all records; preserve filter/scroll context. Measure at 100/500/1,000 realistic fictional customers. |
