@@ -361,6 +361,35 @@ dialog::backdrop{background:#152f4266;backdrop-filter:blur(5px)}
   .form-actions{margin-top:15px}
 }
 
+.schedule-offset{display:block;margin-top:4px;color:#526e77;font-size:12px;line-height:1.8;white-space:normal}
+.installment-card .schedule-offset{font-size:12px;color:#526e77}
+
+/* Two near-term totals stay visible before the larger account overview. */
+.daily-dues{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:22px}
+.daily-due{min-width:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 16px;text-align:right;padding:17px 21px;border:1px solid #d9e6e4;border-radius:14px;background:#fff;color:#244e49;transition:border-color .15s,background .15s}
+.daily-due-today{background:#fff8eb;border-color:#e5c993;color:#71501b}
+.daily-due:hover{border-color:#729f95;background:#f3f9f6}
+.daily-due-today:hover{border-color:#b18a45;background:#fff3dc}
+.daily-due-top{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 10px;font-size:15px;font-weight:650}
+.daily-due-count{font-size:12px;font-weight:500;padding:1px 7px;border-radius:6px;background:#eaf3ef;white-space:nowrap}
+.daily-due-today .daily-due-count{background:#f5e7c9}
+.daily-due-date{font-size:12px;grid-column:1/-1;color:#607c76}
+.daily-due-today .daily-due-date{color:#866b40}
+.daily-due-amount{font-size:26px;line-height:1.7;font-weight:750;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;min-width:0}
+.daily-due-amount small{font-size:12px;font-weight:400;display:inline-block}
+.daily-due-link{display:flex;align-items:center;gap:5px;align-self:end;padding-bottom:5px;font-size:12px;white-space:nowrap}
+.daily-due-link .icon{width:16px;height:16px}
+@media(max-width:700px){
+  .daily-dues{gap:10px;margin-bottom:18px}
+  .daily-due{grid-template-columns:minmax(0,1fr);align-content:start;gap:3px;padding:13px;border-radius:12px;line-height:1.65}
+  .daily-due-top{font-size:14px;gap:4px}
+  .daily-due-count{font-size:11px;padding:1px 5px}
+  .daily-due-date{font-size:12px}
+  .daily-due-amount{font-size:22px;line-height:1.45;margin:3px 0}
+  .daily-due-amount small{display:block;font-size:11px;line-height:1.5}
+  .daily-due-link{font-size:12px;padding-bottom:0;justify-content:space-between}
+}
+
 /* Keep the connection task compact; show explanations only when requested. */
 .cloud-card{margin-bottom:24px}
 .cloud-card h2{margin-bottom:12px}

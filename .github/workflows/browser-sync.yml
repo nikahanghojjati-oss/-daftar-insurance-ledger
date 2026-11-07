@@ -16,6 +16,7 @@ jobs:
       - run: npm install --no-save --ignore-scripts playwright@1.62.1
       - run: npx playwright install --with-deps chromium
       - run: node scripts/browser-sync.cjs
+      - run: node scripts/browser-daily-dues.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

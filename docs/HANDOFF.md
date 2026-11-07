@@ -1,5 +1,23 @@
 # Daftar: handoff for the next GPT
 
+## Installment wording clarification — November 7, 2026
+
+During the Home work, owner confirmed the intended default timing (first = issuance + 1 Jalali month + 15 days, then monthly from the first due date, up to six regular installments) and asked to stop labeling the saved policy only as monthly. The form option now explicitly starts with 1 month + 15 days, 2 months + 15 days; each editable installment and each saved profile row/card shows its actual calendar interval from issuance alongside the exact Persian date. For a saved policy, issuance is derived only from its existing down-payment schedule entry; legacy policies without one do not invent an issuance date. Custom dates display their actual interval, not a hard-coded default. No stored schedules, receipts or generation logic changed. A calendar month plus 15 days must not be described as universally 45 fixed days.
+
+Browser acceptance includes creating and saving a six-installment policy issued 1404/12/05, checking all six issuance offsets, a manual date correction and mobile layout. Final application candidate 79dacd7c41adc6b61e6246e69cb4869eec4d4702 passed all three workflows: Node/source 42397738225, Chromium 42397738469 and Firebase emulator 42397738218. Downloaded phone policy screenshot and result JSON were inspected. Subsequent release-note changes affect documentation only. Manual date and amount editing remains available both before save and through the existing saved-schedule editor; total-preservation and receipt/history protections remain intact.
+
+## Home daily dues — November 7, 2026
+
+Owner requested prominent today/tomorrow installments on Home without crowding it. A single two-column section now precedes the larger account statistics. Each button shows the Persian day/date, open-installment count and remaining amount; today's warm highlight is stronger than tomorrow's. Tapping opens the corresponding exact-day filter in Dues, where both filters are also available. Totals use all pending dueItems, not the four-row preview, and exclude paid installments while preserving partial balances. Existing Tehran clock refresh controls day rollover. No customer lists were added to this section, no storage/sync or accounting calculations changed. Cache v20 supplies the updated assets.
+
+Local 78/78 Node checks pass. Local Chromium launch was attempted and refused by the executor's socket restriction; the added fictional-record browser acceptance must pass in CI before publication. It checks totals despite older overdue items, partial/paid installments, navigation, view-only record preservation, a payment and reload, Tehran midnight while offline, empty/rial states and phone/desktop widths. See the latest VALIDATION entry for release results.
+
+Initial Chromium acceptance passed in run 42397205664; downloaded phone/desktop screenshots were inspected. Final phone styling aligns both currency labels on their own line; the test clock is paused for deterministic midnight coverage. Require final-head CI before merge.
+
+## Shared access activated — November 7, 2026, 12:30 PM ET
+
+After the owner's GitHub sign-in approval, manual publish run 42396610260 succeeded on main commit 8044851ae6a957d8124ddfc4bb7be58a5d7c7155. Firebase readback matched the exact reviewed source (SHA-256 c24f634377c94656335cb074bd74e476cb9f61162e12d6c2ecb8553e3e241f9b). Both approved account UIDs now have production permission to the original ledger. This supersedes the publication-pending notes below. Actual father sign-in and physical-device payment synchronization remain NOT CHECKED.
+
 ## Shared account access — November 7, 2026
 
 Owner supplied the father's Auth UID `OrAHVtSfEGXWBSqswGdr74O3CO62` and delegated the account arrangement with preservation of data as the priority. Selected arrangement: two explicit authorized sign-ins share the original ledger `i6VYpbhc1Iaf0qNjILLRnwhvISR2`. This is not a per-user ledger feature. Existing customer paths, currency, queues, receipts and backups stay in place. Do not rename the ledger to the father's UID or reset browser storage.

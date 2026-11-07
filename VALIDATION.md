@@ -1,5 +1,25 @@
 # Validation — 2026-11-01
 
+## Explicit installment timing labels — November 7, 2026
+
+Owner confirmed the existing generation rule and requested visible offsets from issuance instead of the incomplete monthly label. The default option now spells out the first two intervals. Form rows and saved desktop/mobile installment rows show the actual calendar-month/day interval from issuance plus their existing exact date. Derive saved issuance only from an existing down-payment entry; omit unprovable offsets on older records without one. This changes presentation only, including recomputing the display when a custom date is edited. It does not regenerate or alter any saved schedule, receipt or currency. Calendar month + 15 days is not uniformly 45 elapsed days.
+
+Final application candidate 79dacd7c41adc6b61e6246e69cb4869eec4d4702 passed Node/source run 42397738225 (78 tests), Chromium run 42397738469 (existing two-account sync/backup acceptance and extended Home/timing scenario), and Firebase emulator run 42397738218. Browser checks verified all six offsets in an actual new-policy form and saved profile (issuance 1404/12/05), an edited second due date showing 2 months + 16 days, and phone layout. Downloaded result JSON and the phone policy screenshot were inspected. Earlier phone/desktop Home screenshots also passed inspection. Subsequent release-note changes are documentation only. Manual date/amount editing, sum checks and retained receipts remain available; no schedule or accounting generator was changed. Actual phone hardware and production cross-device synchronization remain NOT CHECKED.
+
+## Home today/tomorrow summary — November 7, 2026
+
+Added two compact exact-day summaries above the Home account statistics, with remaining amounts, open counts, Persian dates and direct navigation to the matching Dues filter. Reads the same pending installment allocation used by profiles; no accounting, persistence or Firebase behavior changed. Cache protocol advanced consistently to v20.
+
+Local validation: all 78 Node tests pass; app and browser script syntax and diff checks pass. Local Chromium was attempted but could not launch because the executor refused its singleton socket. CI browser acceptance and visual inspection are pending at the initial feature commit; no browser or publication success is claimed from those local checks.
+
+The added scripts/browser-daily-dues.cjs uses only fictional local records and rejects unexpected Google API calls. It exercises two today dues totaling 800,000 toman after a partial receipt, one tomorrow due totaling 1,200,000 with a second tomorrow policy already paid, five older overdue items, exact-day navigation, unchanged records from browsing, payment/reload updates, offline Tehran midnight rollover, empty rial state, and 360/390/768/1280px layout checks.
+
+Initial application candidate 0bf014c78fbedce162014149f63bcf2044d04242 passed Node/source run 42397205672 and Chromium run 42397205664, including both the existing two-account sync scenario and the new daily-dues scenario. Downloaded screenshots at 360×660 and 1280×900 were inspected; the phone view prompted a small final adjustment to align amounts and put both currency labels on their own line. The browser clock is paused before the midnight test so slow screenshots cannot advance its day accidentally. Final-head CI remains required before merge.
+
+## Shared-access production rule publication — November 7, 2026
+
+Manual publish run https://github.com/nikahanghojjati-oss/-daftar-insurance-ledger/actions/runs/42396610260 succeeded at 12:30 PM ET on reviewed main commit 8044851ae6a957d8124ddfc4bb7be58a5d7c7155. Logs confirm operation publish and FIREBASE_RULES_EXACT_SOURCE_OK for daftar-insurance-ledger, SHA-256 c24f634377c94656335cb074bd74e476cb9f61162e12d6c2ecb8553e3e241f9b. The publisher read back the active release and compared its sole source file byte-for-byte with the reviewed rules. Both supplied authorized UIDs can access the original ledger path. No production customer data was read or written. This supersedes the earlier manual-publication-pending status; actual father sign-in, phone persistence and physical two-device exchange remain NOT CHECKED.
+
 ## Shared account access candidate — November 7, 2026
 
 Two allowlisted accounts use the original ledger path. No customer migration, ledger/schema rewrite, payment calculation change, browser-storage reset or production record operation is part of this update. Old sessions infer the original auth identity; new sessions persist authUid separately and reject identity changes during renewal. Rules retain immutable metadata, bounded envelopes, no hard deletes and deny other users/paths.
