@@ -202,3 +202,78 @@ main{max-width:1250px}
 .home-daybook .daily-due-today .daily-due-amount small{display:inline-block;font-size:14px;margin-right:8px}
 .home-daybook .daily-due-today .daily-due-link{width:100%;box-sizing:border-box}
 .home-design>.save-strip{border-top:1px solid var(--line);padding-top:12px;margin-top:18px}
+
+/* Compact task-first rhythm; keep 48px controls and readable live values. */
+.due-day-number{display:none}
+.home-design .daily-due{line-height:1.5;justify-content:flex-start}
+.home-design .daily-due .daily-due-amount small{display:inline;font-size:12px;line-height:1.5;margin:0 5px 0 0}
+.home-daybook .daily-due-today .daily-due-amount{line-height:1.2;margin:8px 0 14px}
+.home-daybook .daily-due-today .daily-due-link{flex-shrink:0}
+.home-design .daily-due-amount{line-height:1.4}
+.home-balance.stats{padding:10px 12px;gap:4px 12px}
+.home-balance strong{line-height:1.4}
+.home-balance .home-overdue{line-height:1.5;padding-top:4px}
+.home-customer small{display:inline;margin-right:4px}
+.home-design>.save-strip{font-size:12px;line-height:1.7;padding-top:8px;margin-top:14px;margin-bottom:0}
+.home-design>.save-strip button{min-height:40px}
+:root[data-view=home] .footer{display:none}
+.home-daybook .home-customers .home-section-heading{display:none}
+.home-agenda .home-masthead .eyebrow,.home-desk .home-masthead .eyebrow{display:none}
+.home-agenda .home-masthead h1{font-size:24px}
+.home-agenda .home-masthead p{display:none}
+.home-agenda .agenda-date strong{font-size:46px}
+.home-agenda .agenda-date span{font-size:12px;line-height:1.7}
+.home-agenda .home-masthead{margin-bottom:10px}
+.home-agenda .daily-due{grid-template-columns:40px minmax(0,1fr) auto;column-gap:10px;min-height:76px;padding:10px 8px}
+.home-agenda .daily-due .daily-due-top{grid-column:2;grid-row:1/3;font-size:18px;line-height:1.5}
+.home-agenda .daily-due-count{font-size:13px}
+.home-agenda .daily-due .daily-due-date{grid-column:1;grid-row:1/3;margin:0;background:var(--green);color:#fff;border-radius:5px;text-align:center;width:40px;min-height:44px;display:grid;align-content:center}
+.home-agenda .daily-due-today .daily-due-date{background:var(--accent)}
+.home-agenda .daily-due .due-date-text{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.home-agenda .due-day-number{display:block;font-size:23px;font-weight:750;line-height:1.3}
+.home-agenda .daily-due .daily-due-amount{grid-column:3;grid-row:1/3;font-size:23px;margin:0;line-height:1.4;max-width:170px}
+.home-agenda .daily-due .daily-due-amount small{font-size:11px}
+.home-agenda .home-balance strong{font-size:23px}
+.home-desk .home-masthead{margin-bottom:12px}
+.home-desk .home-masthead h1{font-size:27px}
+.home-desk .home-masthead>.icon{display:none}
+.home-desk .daily-dues{padding:12px 4px}
+.home-desk .daily-due{min-height:122px;justify-content:space-between}
+.home-desk .daily-due-date{font-size:13px;margin:2px 0}
+.home-desk .daily-due-amount{font-size:24px;line-height:1.3;margin:6px 0}
+.home-desk .daily-due-link{font-size:12px;white-space:normal}
+.home-desk .home-customers{margin-top:12px}
+.home-desk .home-customers .home-section-heading{display:none}
+.home-desk .home-customers>.btn{margin-top:8px}
+@media(max-width:760px){
+ .topbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;padding:6px 14px;min-height:0}
+ .crumb{grid-column:1;grid-row:1;min-height:48px}
+ .crumb>strong,.crumb>span:not(.topbar-brand){display:none}
+ .appearance-settings{grid-column:2;grid-row:1;margin:0;justify-self:end}
+ .connection{grid-column:2;grid-row:2;min-height:22px;max-width:175px;margin:0;font-size:11px;padding:1px 6px;justify-self:end}
+ .today{grid-column:1;grid-row:2;font-size:12px;line-height:1.5;align-self:center}
+ .today small{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+ main{padding-top:12px}
+ .home-daybook .daily-due-today{padding:16px}
+ .home-daybook .daily-due-today .daily-due-top{font-size:22px;line-height:1.5}
+ .home-daybook .daily-due-today .daily-due-amount{font-size:40px}
+ .home-daybook .daily-due-tomorrow{padding:12px;min-height:78px}
+ .home-daybook .daily-due-tomorrow .daily-due-top{font-size:16px;line-height:1.5}
+ .home-daybook .daily-due-tomorrow .daily-due-amount{font-size:22px;padding-right:10px}
+ .home-daybook .daily-due-tomorrow .daily-due-date{font-size:13px}
+ .home-balance.stats{margin:10px 0 14px}
+ .home-balance .home-overdue{font-size:13px}
+ .home-customer{min-height:52px;padding:8px 0;line-height:1.5}
+ .home-customer small{font-size:11px}
+ .home-customers .search input{font-size:16px}
+ .home-section-heading{margin:2px 0}
+ .home-section-heading h2{font-size:18px}
+ .home-agenda .home-balance strong{font-size:21px}
+ .home-agenda .daily-due .daily-due-amount{font-size:21px;max-width:142px}
+ .home-agenda .daily-due .daily-due-top{font-size:16px}
+ .home-desk .home-masthead h1{font-size:25px}
+ .home-desk .home-masthead p{font-size:13px;line-height:1.7}
+ .home-desk .daily-due-amount{font-size:22px}
+ .today-task{line-height:1.5;padding:12px 10px}
+ .today-task strong small{display:inline;font-size:11px}
+}
