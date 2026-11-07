@@ -192,3 +192,13 @@ main{max-width:1250px}
 .home-agenda .daily-due-today:hover{background:#ece6df}
 .home-agenda .daily-due-tomorrow:hover{background:var(--soft)}
 .home-desk .daily-due:hover{background:var(--green-soft)}
+
+/* Visual QA: remove repeated headings, keep business status after the home tasks. */
+.topbar .crumb .topbar-brand{color:var(--ink)}
+:root[data-appearance=desk] .topbar .crumb .topbar-brand{color:#fff}
+.home-daybook .home-masthead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.home-design .daily-due>*{width:100%;box-sizing:border-box}
+.home-design .daily-due-amount{letter-spacing:normal}
+.home-daybook .daily-due-today .daily-due-amount small{display:inline-block;font-size:14px;margin-right:8px}
+.home-daybook .daily-due-today .daily-due-link{width:100%;box-sizing:border-box}
+.home-design>.save-strip{border-top:1px solid var(--line);padding-top:12px;margin-top:18px}
