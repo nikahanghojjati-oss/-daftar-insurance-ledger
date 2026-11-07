@@ -1,5 +1,13 @@
 # Daftar: handoff for the next GPT
 
+## Shared account access — November 7, 2026
+
+Owner supplied the father's Auth UID `OrAHVtSfEGXWBSqswGdr74O3CO62` and delegated the account arrangement with preservation of data as the priority. Selected arrangement: two explicit authorized sign-ins share the original ledger `i6VYpbhc1Iaf0qNjILLRnwhvISR2`. This is not a per-user ledger feature. Existing customer paths, currency, queues, receipts and backups stay in place. Do not rename the ledger to the father's UID or reset browser storage.
+
+Candidate client separates authentication identity (`authUid`) from fixed ledger identity (`owner`), preserves old owner sessions and validates token refresh against the original signed-in identity. Candidate rules grant only those two UIDs access to the original path, retaining metadata immutability, document size limits, deny-by-default paths and hard-delete denial. Cache v19 supplies the updated modules. No production customer reads or writes are needed for this access update.
+
+Publication and emulator/browser results are recorded in the latest VALIDATION.md entry. A merged rules file does not publish Firebase rules: the existing manual rules-control workflow must run `publish` on reviewed main and read back an exact match. Do not say the father's access is active without that evidence. Real dad sign-in, phone persistence and physical-device payment exchange remain NOT CHECKED. Independent downloaded backups remain necessary; synchronization is not versioned backup and zero data loss cannot be guaranteed.
+
 ## Current summary — November 7, 2026
 
 The owner canceled all work splitting. Sol owns the whole project without helper agents; use [WORK_PLAN.md](WORK_PLAN.md). Draft PR #16 is closed and superseded by reliability PR #17.
@@ -122,3 +130,4 @@ This branch adds a **user-triggered diagnostic** to the actual sign-in dialog, s
 ## Safari sign-in root-cause fix — 2026-11-03 ET
 
 Owner ran the independent device-specific network probe and reported **SITE_OK | GOOGLE_REACHABLE | AUTH_REACHABLE** on the same iPhone that consistently showed NETWORK_UNAVAILABLE in the login form. The newer login screen and its diagnostic button are now visible, so the main app also loaded the updated assets. Comparing request paths exposed a deterministic browser API usage bug: the real login client used `fetcher=globalThis.fetch` in `FirebaseRest`, then called `this.fetcher(url,options)`. Native browser fetch may reject a receiver other than Window/WorkerGlobalScope (`TypeError: Illegal invocation`), and the existing catch incorrectly surfaced the error as `NETWORK_UNAVAILABLE`. The independent probe invoked its fetcher as a plain function and succeeded. Fix: wrap the default in `(...args)=>globalThis.fetch(...args)`, which invokes fetch on globalThis with the correct browser receiver. Keep injected fake fetchers unchanged. Add a receiver-check regression test simulating Safari's native fetch brand-check; update shell cache to v16. This is a strong code-level explanation, but do not claim actual owner sign-in success until the user retries on device. No Firebase configuration/rules, credentials, local records or schema changed. Owner should refresh the live app after GitHub Pages deployment and retry once, then report whether the preview appears or whether a new error code appears. Do NOT delete Safari data.
+

@@ -1,5 +1,15 @@
 # Validation — 2026-11-01
 
+## Shared account access candidate — November 7, 2026
+
+Two allowlisted accounts use the original ledger path. No customer migration, ledger/schema rewrite, payment calculation change, browser-storage reset or production record operation is part of this update. Old sessions infer the original auth identity; new sessions persist authUid separately and reject identity changes during renewal. Rules retain immutable metadata, bounded envelopes, no hard deletes and deny other users/paths.
+
+Local checks: 78/78 Node tests pass, including five shared-access regressions. Syntax checks pass for the updated client, browser scenario and emulator tests. Local Chromium was attempted but the executor refused its singleton socket (`Operation not permitted`); browser acceptance must run in CI. No physical-device or production-account sign-in has been performed.
+
+Application candidate `9a556489899b8b2227e547fedc3e12725e234c14` in PR #18 passed all checks: Node/source run 42395532970; browser run 42395532921; Firebase emulator run 42395532965. The browser scenario used two distinct synthetic authorized identities and the actual dad login form, with token renewal, preserved legacy session, offline saving/reload and reconnection converging to 300,000 toman with exactly two receipts and two writes. Backup freshness and 360/1280px widths passed without JavaScript errors. The emulator's five groups passed, including the father's authenticated read/write of the existing customer's receipts plus denied separate-ledger paths, deletes, metadata overwrites and other users. The REST concurrency test uses an emulator-only admin transport separately from those identity authorization checks.
+
+All fixtures are fictional; mocked browser transport and emulator results do not prove real-device production acceptance. Code publication is tracked by PR #18. Manual Firebase rule publication remains pending: the GitHub connector has no workflow-dispatch operation, local gh is not authenticated, and the available cloud browser is signed out. Do not change the manual workflow or expose its rules-only secret to work around that boundary. Owner continuation: open the existing firebase-rules-control.yml Actions page while signed in, choose Run workflow, branch main, operation publish, then verify the exact-source readback success. No production customer data or credential was read or written in this update. The change cannot promise zero data loss; keep independent downloaded backups and perform the physical-device acceptance with fictional data.
+
 ## Automated
 
 The initial 12 passing Node tests:
@@ -140,3 +150,4 @@ Local Chromium could not launch because the executor refused its Unix socket; sh
 A local CPU comparison of portable business content with ten fictional receipts per customer preserved revisions at 100/500/1,000 customers. Serialized ledgers were about 143/717/1,435 KB; single comparison observations were 14/37/50 ms on this executor. These are diagnostic observations, not benchmarks on the father's phone and not proof of faster overall sync.
 
 Still NOT CHECKED: real-account login/persistence and expired-token renewal on the actual Safari/Android devices; production A-to-B and B-to-A payment exchange; physical-device offline recovery. The owner's screenshot establishes one displayed successful online check only. Cloud UI timestamps remain historical checks, not a claim that every device is current.
+

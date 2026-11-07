@@ -8,6 +8,8 @@ GitHub Pages is live: https://nikahanghojjati-oss.github.io/-daftar-insurance-le
 
 Current data status: local-first ledger with optional private Firebase REST synchronization. Owner-approved UID-scoped rules were published. A phone screenshot shows one recorded successful online check; persistent access and two-physical-device production acceptance remain unverified. See [the current work plan](docs/WORK_PLAN.md) and the latest validation notes.
 
+Shared-access update: two specifically approved Email/Password accounts can use the original Daftar. Credentials identify the person; they do not create another ledger. Existing sessions and ledger/receipt IDs are retained. Firebase rule publication is a separate manual step; see the latest validation entry for activation status. Keep downloaded backups separately because sync does not provide historical backup recovery.
+
 
 Publicly accessible, buildless application with a device-local ledger and optional private cloud connection. No AI, analytics, CDN, or external font dependencies.
 
@@ -61,3 +63,4 @@ The continuation branch includes an optional local-first Firebase REST sync impl
 Owner-approved private Firebase rules were published on 2026-11-02 ET. The sync client still requires initial device sign-in and connection review; production two-device acceptance must precede migration of real records.
 
 New insurance policies default to the first installment due one Jalali month plus 15 calendar days after issuance, followed by installments each Jalali month anchored to that first due date. The form labels this as the default; the older every-month-plus-15-days recurrence and weekly schedules remain optional. Existing saved schedules retain their dates and frequency; custom dates and amounts remain editable.
+
