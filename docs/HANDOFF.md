@@ -1,5 +1,11 @@
 # Daftar: handoff for the next GPT
 
+## Installment wording clarification — November 7, 2026
+
+During the Home work, owner confirmed the intended default timing (first = issuance + 1 Jalali month + 15 days, then monthly from the first due date, up to six regular installments) and asked to stop labeling the saved policy only as monthly. The form option now explicitly starts with 1 month + 15 days, 2 months + 15 days; each editable installment and each saved profile row/card shows its actual calendar interval from issuance alongside the exact Persian date. For a saved policy, issuance is derived only from its existing down-payment schedule entry; legacy policies without one do not invent an issuance date. Custom dates display their actual interval, not a hard-coded default. No stored schedules, receipts or generation logic changed. A calendar month plus 15 days must not be described as universally 45 fixed days.
+
+Browser acceptance now includes creating and saving a six-installment policy issued 1404/12/05, checking all six issuance offsets, a manual date correction and mobile layout. This extension requires fresh CI before merge; the earlier Home-only candidate 723a189724d66f28226b799a16e8eca26d40dce7 passed all three workflows (Node 42397352270, Chromium 42397352267, Firebase emulator 42397352265).
+
 ## Home daily dues — November 7, 2026
 
 Owner requested prominent today/tomorrow installments on Home without crowding it. A single two-column section now precedes the larger account statistics. Each button shows the Persian day/date, open-installment count and remaining amount; today's warm highlight is stronger than tomorrow's. Tapping opens the corresponding exact-day filter in Dues, where both filters are also available. Totals use all pending dueItems, not the four-row preview, and exclude paid installments while preserving partial balances. Existing Tehran clock refresh controls day rollover. No customer lists were added to this section, no storage/sync or accounting calculations changed. Cache v20 supplies the updated assets.

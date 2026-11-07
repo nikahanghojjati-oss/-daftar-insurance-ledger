@@ -1,5 +1,11 @@
 # Validation — 2026-11-01
 
+## Explicit installment timing labels — November 7, 2026
+
+Owner confirmed the existing generation rule and requested visible offsets from issuance instead of the incomplete monthly label. The default option now spells out the first two intervals. Form rows and saved desktop/mobile installment rows show the actual calendar-month/day interval from issuance plus their existing exact date. Derive saved issuance only from an existing down-payment entry; omit unprovable offsets on older records without one. This changes presentation only, including recomputing the display when a custom date is edited. It does not regenerate or alter any saved schedule, receipt or currency. Calendar month + 15 days is not uniformly 45 elapsed days.
+
+The existing Home candidate 723a189724d66f28226b799a16e8eca26d40dce7 passed Node/source 42397352270, Chromium 42397352267 and Firebase emulator 42397352265. The browser script is extended to verify all six offsets in an actual new-policy form and saved profile (issuance 1404/12/05), an edited second due date showing 2 months + 16 days, and phone layout. Fresh checks on the extended candidate are required before merge.
+
 ## Home today/tomorrow summary — November 7, 2026
 
 Added two compact exact-day summaries above the Home account statistics, with remaining amounts, open counts, Persian dates and direct navigation to the matching Dues filter. Reads the same pending installment allocation used by profiles; no accounting, persistence or Firebase behavior changed. Cache protocol advanced consistently to v20.

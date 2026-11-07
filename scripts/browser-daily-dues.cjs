@@ -77,6 +77,27 @@ const root=path.resolve(__dirname,'..'),out=path.resolve(process.env.BROWSER_EVI
   await page.locator('.nav-item[data-view="home"]').click();
   assert.match(await today.innerText(),/۱ قسط/);assert.match(await today.innerText(),/۲۰۰٬۰۰۰/);
   await page.reload();assert.match(await today.innerText(),/۲۰۰٬۰۰۰/);
+  // The default must be explained relative to issuance, not just called monthly.
+  await page.locator('.customer-name[data-id="today-partial"]').click();
+  await page.locator('[data-action="add-policy"]').click();
+  await page.locator('#policy-form [name="title"]').fill('برنامه شش قسطی آزمایشی');
+  await page.locator('#policy-form [name="paymentDate"]').fill('1404/12/05');
+  await page.locator('#policy-form [name="total"]').fill('700000');
+  await page.locator('#policy-form [name="down"]').fill('100000');
+  await page.locator('#policy-form [name="count"]').fill('6');
+  for(let n=0;n<6;n++)assert.equal(await page.locator(`[data-installment-offset="${n}"]`).innerText(),core.fa(n+1)+' ماه و ۱۵ روز پس از صدور');
+  await page.locator('[data-installment-date="1"]').fill('1405/02/21');
+  assert.equal(await page.locator('[data-installment-offset="1"]').innerText(),'۲ ماه و ۱۶ روز پس از صدور');
+  await page.locator('[data-installment-date="1"]').fill('1405/02/20');
+  await page.locator('#policy-form button[type="submit"]').click();
+  await page.getByRole('heading',{name:'برنامه شش قسطی آزمایشی',exact:true}).waitFor();
+  assert.deepEqual(await page.locator('.desktop-schedule .schedule-offset').allTextContents(),Array.from({length:6},(_,n)=>core.fa(n+1)+' ماه و ۱۵ روز پس از صدور'));
+  assert.doesNotMatch(await page.locator('.policy-title').allTextContents().then(x=>x.join(' ')),/اقساط ماهانه شمسی/);
+  await page.setViewportSize({width:360,height:660});
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  await page.locator('.policy-card').last().screenshot({path:path.join(out,'six-installment-labels-phone.png')});
+  await page.setViewportSize({width:1280,height:900});
+  await page.locator('.nav-item[data-view="home"]').click();
   // Crossing Tehran midnight while offline rolls tomorrow into today.
   await context.setOffline(true);await page.clock.fastForward(30000);
   assert.match(await today.innerText(),/۱٬۲۰۰٬۰۰۰/);assert.match(await tomorrow.innerText(),/۰ قسط/);
@@ -88,7 +109,7 @@ const root=path.resolve(__dirname,'..'),out=path.resolve(process.env.BROWSER_EVI
   assert.equal(await empty.getByText('قسط باز ندارید',{exact:true}).count(),2);
   assert.match(await empty.locator('.daily-dues').innerText(),/ریال/);
   assert.deepEqual(errors,[]);
-  await fs.writeFile(path.join(out,'daily-dues-result.json'),JSON.stringify({passed:true,scenarios:['exact-day totals despite five older dues','partial/paid exclusion','today and tomorrow navigation','viewing preserves records','payment and reload update totals','offline Tehran midnight rollover','empty rial ledger'],widths:[360,390,768,1280]},null,2));
+  await fs.writeFile(path.join(out,'daily-dues-result.json'),JSON.stringify({passed:true,scenarios:['exact-day totals despite five older dues','partial/paid exclusion','today and tomorrow navigation','viewing preserves records','payment and reload update totals','six installment issuance offsets in form and saved policy','manual date changes update the displayed offset','offline Tehran midnight rollover','empty rial ledger'],widths:[360,390,768,1280]},null,2));
   console.log('Daily dues browser acceptance passed. Fictional records only.');
  }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(error=>{console.error(error);process.exitCode=1;});
