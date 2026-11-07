@@ -78,6 +78,7 @@ const root=path.resolve(__dirname,'..'),out=path.resolve(process.env.BROWSER_EVI
   assert.match(await today.innerText(),/۱ قسط/);assert.match(await today.innerText(),/۲۰۰٬۰۰۰/);
   await page.reload();assert.match(await today.innerText(),/۲۰۰٬۰۰۰/);
   // The default must be explained relative to issuance, not just called monthly.
+  await page.locator('.nav-item[data-view="customers"]').click();
   await page.locator('.customer-name[data-id="today-partial"]').click();
   await page.locator('[data-action="add-policy"]').click();
   await page.locator('#policy-form [name="title"]').fill('برنامه شش قسطی آزمایشی');
