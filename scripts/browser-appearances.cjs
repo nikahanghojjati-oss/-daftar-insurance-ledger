@@ -37,7 +37,7 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'browser-evidence');
  await p.locator('[data-action="resume-draft"]').first().click();assert.equal(await p.locator('#customer-form [name="name"]').inputValue(),'فرم ناتمام آزمایشی');await p.locator('[data-action="discard-draft"]').click();
  assert.equal(await p.evaluate(()=>localStorage.getItem('daftar.ledger.v1')),before);
  // Record one actual UI receipt after switching; stable receipt survives cached reopen.
- await p.locator('.daily-due-today').click();await p.locator('.due-list .due-card').first().click();await p.locator('[data-action="pay"]').click();await p.locator('#payment-form [name="amount"]').fill('100000');await p.locator('#payment-form button[type="submit"]').click();await p.waitForFunction(()=>!document.querySelector('#dialog').open);
+ await p.locator('.daily-due-today').click();await p.locator('.due-list .due-card[data-id="a"]').click();await p.locator('[data-action="pay"]').click();await p.locator('#payment-form [name="amount"]').fill('100000');await p.locator('#payment-form button[type="submit"]').click();await p.waitForFunction(()=>!document.querySelector('#dialog').open);
  const receipt=await p.evaluate(()=>JSON.parse(localStorage.getItem('daftar.ledger.v1')).customers[0].policies[0].payments[0]);assert.ok(receipt.id);
  await p.locator('.mobile-nav [data-view="home"]').click();assert.match(await p.locator('.daily-due-today').innerText(),/۷۰۰٬۰۰۰/);
  await p.waitForFunction(()=>document.querySelector('#connection').textContent.includes('آماده استفاده آفلاین'));
