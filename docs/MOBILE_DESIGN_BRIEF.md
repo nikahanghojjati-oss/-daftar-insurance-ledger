@@ -1,0 +1,13 @@
+# Lightweight professional Daftar
+
+Owner brief, November 7, 2026: improve the design's identity and finish while keeping it immediately understandable for the father. Career Mode Showdown 2 is a read-only example of deliberate, coherent design quality; do not copy its gaming, black/gold/marble, cinematic or 3D language and do not change that repository.
+
+Target supplied by owner: Samsung Galaxy A20 SM-A205F/DS, 720×1560 physical pixels. Owner has no access to the phone and cannot run acceptance on it. Do not request real-phone testing or imply it has happened. The target is a fast, readable, accessible administrative app, free to use. Below-one-second opening is a target, not an established device result.
+
+Design constraints: readable Persian text and numbers, large clear touch targets, sufficient contrast, visible keyboard focus, text alongside status colors, reduced motion, uncluttered Home, prominent today's/tomorrow's unpaid dues, quick customer/payment access, and editable dates/amounts. Prefer spacing, typography, varied but restrained functional colors and purposeful grouping. Avoid replacing white/green with another arbitrary two-color template. No 3D, video, animated backgrounds, large decorative photography, heavy blur or added runtime framework. A small image is not automatically slow, but must earn its transfer/decode cost and never gate critical data.
+
+Before implementation, prepare visual directions grounded in the current app, then obtain the owner's direction choice. Do not publish a visual redesign without a reviewable target. Preserve confirmed financial, receipt/history, calendar, offline, backup and private-sync behavior.
+
+Automatic baseline: scripts/browser-mobile-performance.cjs runs 360×780 and 360×660 layout checks with DPR 2 assumed, relative 6× CPU slowdown, 1.6 Mbps down / 0.75 Mbps up / 150 ms artificial latency, 20 and 100 fictional customers, three fresh/cached-online/cached-offline samples each. Reports first contentful paint, two-frame Home readiness, diagnostic day-navigation time and available JS heap measurement. Does not emulate the A20 CPU/GPU, whole-device RAM, Android, storage speed or thermals. Gzipped local serving excludes production DNS/TLS. Performance is reported separately from functional assertions, with no unearned hardware or one-second guarantee.
+
+References: https://developer.chrome.com/docs/devtools/device-mode and https://developer.chrome.com/blog/devtools-grounded-real-world explain emulation limits. Samsung regional A20 variants differ; the exact model identity comes from the owner's supplied device information, not an assumed US product specification.
